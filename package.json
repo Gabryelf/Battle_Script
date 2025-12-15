@@ -1,0 +1,24 @@
+{
+    "name": "battlescript-server",
+    "version": "2.0.0",
+    "description": "Расширенная карточная игра BattleScript с полной логикой",
+    "main": "server.js",
+    "scripts": {
+      "start": "node server.js",
+      "dev": "nodemon server.js"
+    },
+    "dependencies": {
+      "ws": "^8.14.0"
+    },
+    "devDependencies": {
+      "nodemon": "^3.0.1"
+    },
+    "keywords": [
+      "game",
+      "card-game",
+      "multiplayer",
+      "battlescript"
+    ],
+    "author": "BattleScript Team",
+    "license": "MIT"
+  }
