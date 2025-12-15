@@ -1,0 +1,1900 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BattleScript Core - Игровой движок</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --team-a-color: #ef476f;
+            --team-b-color: #118ab2;
+            --mana-color: #6930c3;
+            --health-color: #06d6a0;
+            --attack-color: #f72585;
+            --dark-bg: #0a0a1a;
+            --card-bg: #1d2d44;
+            --text-color: #e0e1dd;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #15152b 100%);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 25px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--team-a-color), #ffd166, var(--team-b-color));
+            animation: gradientShift 3s infinite linear;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            background: linear-gradient(90deg, var(--team-a-color), #ffd166, var(--team-b-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.4rem;
+            color: #a0a0c0;
+            margin-bottom: 25px;
+        }
+        
+        .load-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .load-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin-top: 25px;
+        }
+        
+        .file-input-group {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .file-input-group label {
+            display: block;
+            margin-bottom: 12px;
+            color: #64dfdf;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        
+        .file-input-group input[type="file"] {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .load-info {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            font-size: 1rem;
+            color: #a0a0c0;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            margin-top: 15px;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: 1fr 400px 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+            min-height: 800px;
+        }
+        
+        @media (max-width: 1400px) {
+            .game-board {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+            }
+        }
+        
+        .team-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            border: 3px solid;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .team-a {
+            border-color: var(--team-a-color);
+        }
+        
+        .team-b {
+            border-color: var(--team-b-color);
+        }
+        
+        .team-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .team-title {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .team-a .team-title {
+            color: var(--team-a-color);
+        }
+        
+        .team-b .team-title {
+            color: var(--team-b-color);
+        }
+        
+        .team-stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        
+        .mana {
+            color: var(--mana-color);
+        }
+        
+        .health {
+            color: var(--health-color);
+        }
+        
+        .cards-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            max-height: 350px;
+        }
+        
+        .board-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            margin-top: 20px;
+            min-height: 250px;
+        }
+        
+        .card {
+            background: linear-gradient(145deg, var(--card-bg), #0f1a2a);
+            border-radius: 15px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        .card.selected {
+            border-color: #ffd166;
+            box-shadow: 0 0 20px rgba(255, 209, 102, 0.5);
+        }
+        
+        .card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .card.disabled:hover {
+            transform: none;
+        }
+        
+        .card-creature {
+            border-color: #4ade80;
+        }
+        
+        .card-spell {
+            border-color: #4cc9f0;
+        }
+        
+        .card-artifact {
+            border-color: #fbbf24;
+        }
+        
+        .card-avatar {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .avatar-placeholder {
+            width: 100%;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 2rem;
+        }
+        
+        .card-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            color: #ffd166;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .card-cost {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--mana-color);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        
+        .card-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .stat-attack, .stat-health {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .stat-attack {
+            background: rgba(247, 37, 133, 0.2);
+            color: var(--attack-color);
+        }
+        
+        .stat-health {
+            background: rgba(6, 214, 160, 0.2);
+            color: var(--health-color);
+        }
+        
+        .card-abilities {
+            font-size: 0.8rem;
+            color: #a0a0c0;
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .ability-tag {
+            background: rgba(105, 48, 195, 0.3);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+        }
+        
+        .game-center {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .turn-indicator {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .turn-title {
+            font-size: 1.2rem;
+            color: #a0a0c0;
+            margin-bottom: 10px;
+        }
+        
+        .turn-team {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .turn-a {
+            color: var(--team-a-color);
+        }
+        
+        .turn-b {
+            color: var(--team-b-color);
+        }
+        
+        .turn-number {
+            font-size: 1.5rem;
+            color: #ffd166;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 18px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, var(--mana-color), #8338ec);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-success {
+            background: linear-gradient(90deg, var(--health-color), #4ce3b5);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(90deg, var(--attack-color), #ff6b8b);
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn:not(:disabled):hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-log {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 25px;
+            padding: 25px;
+            margin-top: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .log-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #64dfdf;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .log-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 10px;
+        }
+        
+        .log-message {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border-left: 4px solid;
+            font-size: 0.9rem;
+        }
+        
+        .log-turn {
+            border-left-color: #ffd166;
+        }
+        
+        .log-attack {
+            border-left-color: var(--attack-color);
+        }
+        
+        .log-heal {
+            border-left-color: var(--health-color);
+        }
+        
+        .log-spell {
+            border-left-color: #4cc9f0;
+        }
+        
+        .log-artifact {
+            border-left-color: #fbbf24;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: linear-gradient(145deg, var(--card-bg), #0f1a2a);
+            border-radius: 25px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+        
+        .victory-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .victory-content {
+            background: linear-gradient(145deg, var(--card-bg), #0f1a2a);
+            border-radius: 30px;
+            padding: 50px;
+            text-align: center;
+            border: 5px solid #ffd166;
+            max-width: 600px;
+            width: 90%;
+        }
+        
+        .victory-title {
+            font-size: 3rem;
+            color: #ffd166;
+            margin-bottom: 30px;
+        }
+        
+        .victory-team {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 20px;
+        }
+        
+        .victory-a {
+            color: var(--team-a-color);
+            background: rgba(239, 71, 111, 0.2);
+        }
+        
+        .victory-b {
+            color: var(--team-b-color);
+            background: rgba(17, 138, 178, 0.2);
+        }
+        
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #64dfdf;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            color: #a0a0c0;
+            margin: 20px 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: #a0a0c0;
+            font-style: italic;
+            padding: 40px;
+            grid-column: 1 / -1;
+        }
+        
+        .card-type {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        
+        .type-creature {
+            color: #4ade80;
+        }
+        
+        .type-spell {
+            color: #4cc9f0;
+        }
+        
+        .type-artifact {
+            color: #fbbf24;
+        }
+        
+        .card-can-attack {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 12px;
+            height: 12px;
+            background: #ffd166;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        .avatar-error {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(239, 71, 111, 0.9);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-gamepad"></i> BattleScript Core</h1>
+            <p class="subtitle">Улучшенная игровая механика с артефактами и заклинаниями</p>
+            <p>Загрузите карты, созданные в BattleScript Creator</p>
+        </header>
+        
+        <section class="load-section">
+            <h2><i class="fas fa-folder-open"></i> Загрузка карт команд</h2>
+            <div class="load-controls">
+                <div class="file-input-group">
+                    <label for="teamAInput"><i class="fas fa-users" style="color: var(--team-a-color);"></i> Карты команды A</label>
+                    <input type="file" id="teamAInput" accept=".md" multiple>
+                    <div class="load-info" id="teamAInfo">Загружено карт: 0</div>
+                </div>
+                
+                <div class="file-input-group">
+                    <label for="teamBInput"><i class="fas fa-users" style="color: var(--team-b-color);"></i> Карты команды B</label>
+                    <input type="file" id="teamBInput" accept=".md" multiple>
+                    <div class="load-info" id="teamBInfo">Загружено карт: 0</div>
+                </div>
+                
+                <div style="display: flex; align-items: flex-end; gap: 15px;">
+                    <button class="btn btn-primary" id="startGameBtn">
+                        <i class="fas fa-play"></i> Начать игру
+                    </button>
+                    <button class="btn btn-secondary" id="testModeBtn">
+                        <i class="fas fa-vial"></i> Тестовый режим
+                    </button>
+                </div>
+            </div>
+        </section>
+        
+        <div class="game-board">
+            <!-- Команда A -->
+            <div class="team-section team-a">
+                <div class="team-header">
+                    <div class="team-title">Команда A</div>
+                    <div class="team-stats">
+                        <div class="stat mana">
+                            <i class="fas fa-gem"></i>
+                            <span id="teamAMana">10</span>
+                        </div>
+                        <div class="stat health">
+                            <i class="fas fa-heart"></i>
+                            <span id="teamAHealth">30</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-title">
+                    <i class="fas fa-hand-paper"></i> Рука
+                </div>
+                <div class="cards-container" id="teamAHand">
+                    <!-- Карты загрузятся здесь -->
+                </div>
+                
+                <div class="section-title">
+                    <i class="fas fa-chess-board"></i> Поле боя
+                </div>
+                <div class="board-container" id="teamABoard">
+                    <!-- Существа загрузятся здесь -->
+                </div>
+            </div>
+            
+            <!-- Центр игры -->
+            <div class="game-center">
+                <div class="turn-indicator">
+                    <div class="turn-title">Сейчас ходит</div>
+                    <div class="turn-team turn-a" id="currentTeam">Команда A</div>
+                    <div class="turn-number" id="turnNumber">Ход 1</div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="endTurnBtn">
+                        <i class="fas fa-forward"></i> Завершить ход
+                    </button>
+                    <button class="btn btn-secondary" id="drawCardBtn">
+                        <i class="fas fa-plus-circle"></i> Взять карту
+                    </button>
+                    <button class="btn btn-success" id="playCardBtn" disabled>
+                        <i class="fas fa-play-circle"></i> Разыграть карту
+                    </button>
+                    <button class="btn btn-danger" id="attackBtn" disabled>
+                        <i class="fas fa-crosshairs"></i> Авто-атака
+                    </button>
+                    <button class="btn btn-secondary" id="restartBtn">
+                        <i class="fas fa-redo"></i> Новая игра
+                    </button>
+                </div>
+                
+                <div style="margin-top: auto;">
+                    <a href="creator.html" class="btn btn-secondary" style="width: 100%;">
+                        <i class="fas fa-external-link-alt"></i> Перейти в Creator
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Команда B -->
+            <div class="team-section team-b">
+                <div class="team-header">
+                    <div class="team-title">Команда B</div>
+                    <div class="team-stats">
+                        <div class="stat mana">
+                            <i class="fas fa-gem"></i>
+                            <span id="teamBMana">10</span>
+                        </div>
+                        <div class="stat health">
+                            <i class="fas fa-heart"></i>
+                            <span id="teamBHealth">30</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-title">
+                    <i class="fas fa-hand-paper"></i> Рука
+                </div>
+                <div class="cards-container" id="teamBHand">
+                    <!-- Карты загрузятся здесь -->
+                </div>
+                
+                <div class="section-title">
+                    <i class="fas fa-chess-board"></i> Поле боя
+                </div>
+                <div class="board-container" id="teamBBoard">
+                    <!-- Существа загрузятся здесь -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-log">
+            <div class="log-title">
+                <i class="fas fa-scroll"></i> Журнал боя
+            </div>
+            <div class="log-messages" id="logMessages">
+                <div class="log-message log-turn">Добро пожаловать в BattleScript Core!</div>
+                <div class="log-message">Загрузите карты команд и начните игру</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-secondary" id="clearCardsBtn">
+                <i class="fas fa-trash"></i> Очистить карты
+            </button>
+            <button class="btn btn-primary" id="helpBtn">
+                <i class="fas fa-question-circle"></i> Помощь
+            </button>
+        </div>
+    </div>
+    
+    <!-- Модальное окно деталей карты -->
+    <div class="modal" id="cardModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModalBtn">&times;</button>
+            <h2 id="modalCardName">Название карты</h2>
+            <div style="margin: 20px 0;">
+                <div id="modalAvatarContainer">
+                    <!-- Аватар загрузится здесь -->
+                </div>
+            </div>
+            <div style="display: flex; gap: 20px; margin: 20px 0;">
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--mana-color);" id="modalCardCost">5</div>
+                    <div style="color: #a0a0c0;">Стоимость</div>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--attack-color);" id="modalCardAttack">5</div>
+                    <div style="color: #a0a0c0;">Атака</div>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--health-color);" id="modalCardHealth">5</div>
+                    <div style="color: #a0a0c0;">Здоровье</div>
+                </div>
+            </div>
+            <div style="margin: 20px 0;">
+                <strong>Тип:</strong> <span id="modalCardType" style="color: #ffd166;">Существо</span>
+            </div>
+            <div style="margin: 20px 0;">
+                <strong>Способности:</strong>
+                <div id="modalCardAbilities" style="margin-top: 10px; color: #a0a0c0;">Нет</div>
+            </div>
+            <div style="margin: 20px 0;">
+                <strong>Описание:</strong>
+                <div id="modalCardDescription" style="margin-top: 10px; line-height: 1.6;">Описание карты...</div>
+            </div>
+            <div style="margin: 20px 0;">
+                <strong>Создатель:</strong> <span id="modalCardCreator" style="color: #64dfdf;">Студент</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Экран победы -->
+    <div class="modal victory-screen" id="victoryScreen">
+        <div class="victory-content">
+            <h2 class="victory-title">🎉 Победа! 🎉</h2>
+            <div class="victory-team victory-a" id="victoryTeam">Команда A</div>
+            <p style="font-size: 1.2rem; margin-bottom: 30px; color: #a0a0c0;">одержала победу в эпическом сражении!</p>
+            <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 40px;">
+                <div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #ffd166;" id="victoryTurn">5</div>
+                    <div style="color: #a0a0c0;">Ходов</div>
+                </div>
+                <div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #ffd166;" id="victoryCards">12</div>
+                    <div style="color: #a0a0c0;">Карт сыграно</div>
+                </div>
+                <div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #ffd166;" id="victoryDamage">48</div>
+                    <div style="color: #a0a0c0;">Урона</div>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="newGameBtn" style="width: 100%;">
+                <i class="fas fa-redo"></i> Новая игра
+            </button>
+        </div>
+    </div>
+    
+    <!-- Индикатор загрузки -->
+    <div class="loading" id="loadingIndicator">
+        <div class="loading-spinner"></div>
+        <div style="font-size: 1.2rem; color: #64dfdf;">Загрузка карт...</div>
+    </div>
+    
+    <script>
+        // Глобальное состояние игры
+        const gameState = {
+            currentTurn: 'A',
+            turnNumber: 1,
+            selectedCard: null,
+            gameStarted: false,
+            gameOver: false,
+            totalDamage: 0,
+            totalCardsPlayed: 0,
+            
+            teamA: {
+                mana: 10,
+                maxMana: 10,
+                health: 30,
+                deck: [],
+                hand: [],
+                board: []
+            },
+            
+            teamB: {
+                mana: 10,
+                maxMana: 10,
+                health: 30,
+                deck: [],
+                hand: [],
+                board: []
+            },
+            
+            logs: []
+        };
+        
+        // DOM элементы
+        const elements = {
+            teamAHand: document.getElementById('teamAHand'),
+            teamABoard: document.getElementById('teamABoard'),
+            teamBHand: document.getElementById('teamBHand'),
+            teamBBoard: document.getElementById('teamBBoard'),
+            teamAMana: document.getElementById('teamAMana'),
+            teamAHealth: document.getElementById('teamAHealth'),
+            teamBMana: document.getElementById('teamBMana'),
+            teamBHealth: document.getElementById('teamBHealth'),
+            currentTeam: document.getElementById('currentTeam'),
+            turnNumber: document.getElementById('turnNumber'),
+            logMessages: document.getElementById('logMessages'),
+            teamAInfo: document.getElementById('teamAInfo'),
+            teamBInfo: document.getElementById('teamBInfo'),
+            
+            // Кнопки
+            endTurnBtn: document.getElementById('endTurnBtn'),
+            drawCardBtn: document.getElementById('drawCardBtn'),
+            playCardBtn: document.getElementById('playCardBtn'),
+            attackBtn: document.getElementById('attackBtn'),
+            restartBtn: document.getElementById('restartBtn'),
+            startGameBtn: document.getElementById('startGameBtn'),
+            testModeBtn: document.getElementById('testModeBtn'),
+            clearCardsBtn: document.getElementById('clearCardsBtn'),
+            helpBtn: document.getElementById('helpBtn'),
+            newGameBtn: document.getElementById('newGameBtn'),
+            
+            // Модальные окна
+            cardModal: document.getElementById('cardModal'),
+            victoryScreen: document.getElementById('victoryScreen'),
+            loadingIndicator: document.getElementById('loadingIndicator'),
+            
+            // Модальные элементы
+            modalCardName: document.getElementById('modalCardName'),
+            modalCardCost: document.getElementById('modalCardCost'),
+            modalCardAttack: document.getElementById('modalCardAttack'),
+            modalCardHealth: document.getElementById('modalCardHealth'),
+            modalCardType: document.getElementById('modalCardType'),
+            modalCardAbilities: document.getElementById('modalCardAbilities'),
+            modalCardDescription: document.getElementById('modalCardDescription'),
+            modalCardCreator: document.getElementById('modalCardCreator'),
+            modalAvatarContainer: document.getElementById('modalAvatarContainer'),
+            
+            // Победа
+            victoryTeam: document.getElementById('victoryTeam'),
+            victoryTurn: document.getElementById('victoryTurn'),
+            victoryCards: document.getElementById('victoryCards'),
+            victoryDamage: document.getElementById('victoryDamage'),
+            
+            // Файловые инпуты
+            teamAInput: document.getElementById('teamAInput'),
+            teamBInput: document.getElementById('teamBInput')
+        };
+        
+        // Системные функции
+        function addLog(message, type = 'normal') {
+            const logEntry = {
+                message,
+                type,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            gameState.logs.push(logEntry);
+            
+            // Ограничиваем количество сообщений
+            if (gameState.logs.length > 50) {
+                gameState.logs.shift();
+            }
+            
+            updateLogUI();
+        }
+        
+        function updateLogUI() {
+            elements.logMessages.innerHTML = '';
+            
+            gameState.logs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = `log-message log-${log.type}`;
+                div.innerHTML = `<strong>[${log.timestamp}]</strong> ${log.message}`;
+                elements.logMessages.appendChild(div);
+            });
+            
+            // Прокручиваем к последнему сообщению
+            elements.logMessages.scrollTop = elements.logMessages.scrollHeight;
+        }
+        
+        // Функция парсинга карт из Markdown
+        function parseCardFromMarkdown(markdown, team) {
+            const lines = markdown.split('\n');
+            const card = {
+                id: 'card_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                name: 'Без названия',
+                type: 'creature',
+                cost: 1,
+                attack: 0,
+                health: 1,
+                abilities: [],
+                description: '',
+                creator: 'Неизвестный студент',
+                avatar: '',
+                team: team,
+                canAttack: false,
+                maxHealth: 1,
+                avatarError: false
+            };
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                if (line.startsWith('# ')) {
+                    card.name = line.substring(2);
+                } else if (line.startsWith('**Тип:**')) {
+                    const typeText = line.substring(7).trim().toLowerCase();
+                    if (typeText.includes('существо')) card.type = 'creature';
+                    else if (typeText.includes('заклинание')) card.type = 'spell';
+                    else if (typeText.includes('артефакт')) card.type = 'artifact';
+                } else if (line.startsWith('**Стоимость:**')) {
+                    const match = line.match(/\d+/);
+                    if (match) card.cost = parseInt(match[0]);
+                } else if (line.startsWith('**Атака:**')) {
+                    const match = line.match(/\d+/);
+                    if (match) card.attack = parseInt(match[0]);
+                } else if (line.startsWith('**Здоровье:**')) {
+                    const match = line.match(/\d+/);
+                    if (match) {
+                        card.health = parseInt(match[0]);
+                        card.maxHealth = card.health;
+                    }
+                } else if (line.startsWith('**Бонус атаки:**')) {
+                    const match = line.match(/\+(\d+)/);
+                    if (match) card.attack = parseInt(match[1]);
+                } else if (line.startsWith('**Бонус здоровья:**')) {
+                    const match = line.match(/\+(\d+)/);
+                    if (match) card.health = parseInt(match[1]);
+                } else if (line.startsWith('**Аватар:**')) {
+                    card.avatar = line.substring(10).trim();
+                } else if (line.startsWith('**Создатель:**')) {
+                    card.creator = line.substring(13).trim();
+                } else if (line === '## Особые способности') {
+                    i++;
+                    while (i < lines.length && lines[i].trim() && !lines[i].startsWith('##')) {
+                        if (lines[i].startsWith('- ')) {
+                            const ability = lines[i].substring(2).trim();
+                            card.abilities.push(ability);
+                            
+                            // Определяем свойства из способностей
+                            if (ability.includes('Прорыв')) card.canAttack = true;
+                        }
+                        i++;
+                    }
+                } else if (line === '## Описание') {
+                    i++;
+                    const desc = [];
+                    while (i < lines.length && lines[i].trim() && !lines[i].startsWith('##')) {
+                        desc.push(lines[i]);
+                        i++;
+                    }
+                    card.description = desc.join('\n').trim();
+                }
+            }
+            
+            return card;
+        }
+        
+        // Загрузка карт из файлов
+        async function loadCardsFromFiles(fileList, team) {
+            const cards = [];
+            
+            for (const file of fileList) {
+                try {
+                    const text = await file.text();
+                    const card = parseCardFromMarkdown(text, team);
+                    
+                    // Проверяем аватар
+                    if (card.avatar) {
+                        try {
+                            const img = new Image();
+                            await new Promise((resolve, reject) => {
+                                img.onload = resolve;
+                                img.onerror = () => reject(new Error('Ошибка загрузки'));
+                                img.src = card.avatar;
+                            });
+                        } catch (error) {
+                            card.avatarError = true;
+                            console.warn(`Ошибка загрузки аватара для карты ${card.name}:`, card.avatar);
+                        }
+                    }
+                    
+                    cards.push(card);
+                } catch (error) {
+                    console.error('Ошибка при чтении файла:', error);
+                    addLog(`Ошибка при загрузке карты из файла ${file.name}`, 'attack');
+                }
+            }
+            
+            return cards;
+        }
+        
+        // Обновление информации о загрузке
+        function updateLoadInfo() {
+            elements.teamAInfo.textContent = `Загружено карт: ${gameState.teamA.deck.length}`;
+            elements.teamBInfo.textContent = `Загружено карт: ${gameState.teamB.deck.length}`;
+        }
+        
+        // Инициализация игры
+        async function initGame() {
+            if (gameState.teamA.deck.length === 0 || gameState.teamB.deck.length === 0) {
+                addLog('Загрузите карты для обеих команд!', 'attack');
+                return;
+            }
+            
+            elements.loadingIndicator.style.display = 'flex';
+            
+            try {
+                // Перемешиваем колоды
+                shuffleArray(gameState.teamA.deck);
+                shuffleArray(gameState.teamB.deck);
+                
+                // Сбрасываем состояние игры
+                gameState.currentTurn = 'A';
+                gameState.turnNumber = 1;
+                gameState.selectedCard = null;
+                gameState.gameStarted = true;
+                gameState.gameOver = false;
+                gameState.totalDamage = 0;
+                gameState.totalCardsPlayed = 0;
+                
+                gameState.teamA.mana = 10;
+                gameState.teamA.maxMana = 10;
+                gameState.teamA.health = 30;
+                gameState.teamA.hand = [];
+                gameState.teamA.board = [];
+                
+                gameState.teamB.mana = 10;
+                gameState.teamB.maxMana = 10;
+                gameState.teamB.health = 30;
+                gameState.teamB.hand = [];
+                gameState.teamB.board = [];
+                
+                gameState.logs = [];
+                
+                // Раздаем начальные карты
+                for (let i = 0; i < 3; i++) {
+                    drawCard('A');
+                    drawCard('B');
+                }
+                
+                addLog('Игра началась! Первым ходит Команда A', 'turn');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                updateUI();
+                
+            } finally {
+                elements.loadingIndicator.style.display = 'none';
+            }
+        }
+        
+        // Взятие карты
+        function drawCard(team) {
+            const teamObj = team === 'A' ? gameState.teamA : gameState.teamB;
+            
+            if (teamObj.deck.length > 0) {
+                const card = teamObj.deck.pop();
+                teamObj.hand.push(card);
+                
+                addLog(`${team === 'A' ? 'Команда A' : 'Команда B'} берет карту: ${card.name}`, 'spell');
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // Разыгрывание карты
+        function playCard(cardId) {
+            const currentTeam = gameState.currentTurn;
+            const teamObj = currentTeam === 'A' ? gameState.teamA : gameState.teamB;
+            
+            const cardIndex = teamObj.hand.findIndex(c => c.id === cardId);
+            if (cardIndex === -1) return false;
+            
+            const card = teamObj.hand[cardIndex];
+            
+            // Проверяем ману
+            if (teamObj.mana < card.cost) {
+                addLog(`Недостаточно маны! Нужно ${card.cost}, есть ${teamObj.mana}`, 'attack');
+                return false;
+            }
+            
+            teamObj.mana -= card.cost;
+            teamObj.hand.splice(cardIndex, 1);
+            
+            // Обрабатываем разные типы карт
+            if (card.type === 'creature') {
+                // Существо идет на поле боя
+                const boardCard = { ...card };
+                boardCard.canAttack = boardCard.abilities.some(a => a.includes('Прорыв'));
+                teamObj.board.push(boardCard);
+                addLog(`${currentTeam === 'A' ? 'Команда A' : 'Команда B'} призывает существо: ${card.name}`, 'spell');
+                
+            } else if (card.type === 'spell') {
+                // Заклинание сразу применяется
+                applySpell(card, currentTeam);
+                addLog(`${currentTeam === 'A' ? 'Команда A' : 'Команда B'} применяет заклинание: ${card.name}`, 'spell');
+                
+            } else if (card.type === 'artifact') {
+                // Артефакт нужно применить на существо
+                if (teamObj.board.length === 0) {
+                    addLog('Нет существ для применения артефакта!', 'attack');
+                    teamObj.hand.push(card); // Возвращаем карту в руку
+                    teamObj.mana += card.cost; // Возвращаем ману
+                    return false;
+                }
+                
+                // Выбираем случайное существо для улучшения
+                const randomIndex = Math.floor(Math.random() * teamObj.board.length);
+                const target = teamObj.board[randomIndex];
+                
+                target.attack += card.attack;
+                target.health += card.health;
+                target.maxHealth += card.health;
+                
+                addLog(`${currentTeam === 'A' ? 'Команда A' : 'Команда B'} применяет артефакт ${card.name} на ${target.name}`, 'artifact');
+            }
+            
+            gameState.totalCardsPlayed++;
+            gameState.selectedCard = null;
+            return true;
+        }
+        
+        // Применение заклинания
+        function applySpell(spell, casterTeam) {
+            const targetTeam = casterTeam === 'A' ? gameState.teamB : gameState.teamA;
+            const casterTeamObj = casterTeam === 'A' ? gameState.teamA : gameState.teamB;
+            
+            // Определяем тип заклинания из описания
+            const desc = spell.description.toLowerCase();
+            let isHeal = desc.includes('исцел') || desc.includes('лечен');
+            let isDamage = desc.includes('урон') || desc.includes('атак') || desc.includes('поврежд');
+            
+            // Если не ясно, предполагаем урон
+            if (!isHeal && !isDamage) {
+                isDamage = true;
+            }
+            
+            if (isHeal) {
+                // Исцеление союзника
+                if (casterTeamObj.board.length === 0) {
+                    // Если нет существ, лечим героя
+                    casterTeamObj.health = Math.min(casterTeamObj.health + spell.attack, 30);
+                    addLog(`${spell.name} исцеляет героя на ${spell.attack} HP`, 'heal');
+                } else {
+                    // Лечим случайное существо
+                    const randomIndex = Math.floor(Math.random() * casterTeamObj.board.length);
+                    const target = casterTeamObj.board[randomIndex];
+                    target.health = Math.min(target.health + spell.attack, target.maxHealth);
+                    addLog(`${spell.name} исцеляет ${target.name} на ${spell.attack} HP`, 'heal');
+                }
+            } else if (isDamage) {
+                // Урон врагу
+                if (targetTeam.board.length === 0) {
+                    // Если нет существ, бьем героя
+                    targetTeam.health -= spell.attack;
+                    gameState.totalDamage += spell.attack;
+                    addLog(`${spell.name} наносит ${spell.attack} урона герою`, 'attack');
+                    
+                    if (targetTeam.health <= 0) {
+                        targetTeam.health = 0;
+                        endGame(casterTeam);
+                    }
+                } else {
+                    // Бьем случайное существо
+                    const randomIndex = Math.floor(Math.random() * targetTeam.board.length);
+                    const target = targetTeam.board[randomIndex];
+                    
+                    let damage = spell.attack;
+                    if (target.abilities.some(a => a.includes('Щит'))) {
+                        damage = Math.max(0, damage - 1);
+                        addLog(`Щит уменьшает урон на 1`, 'spell');
+                    }
+                    
+                    target.health -= damage;
+                    gameState.totalDamage += damage;
+                    addLog(`${spell.name} наносит ${damage} урона ${target.name}`, 'attack');
+                    
+                    if (target.health <= 0) {
+                        targetTeam.board.splice(randomIndex, 1);
+                        addLog(`${target.name} уничтожен!`, 'attack');
+                    }
+                }
+            }
+        }
+        
+        // Автоматическая атака
+        function autoAttack() {
+            const currentTeam = gameState.currentTurn;
+            const attackerTeam = currentTeam === 'A' ? gameState.teamA : gameState.teamB;
+            const targetTeam = currentTeam === 'A' ? gameState.teamB : gameState.teamA;
+            
+            let attacked = false;
+            
+            // Атакуют все существа, которые могут атаковать
+            attackerTeam.board.forEach(attacker => {
+                if (attacker.canAttack) {
+                    if (targetTeam.board.length > 0) {
+                        // Атакуем случайное вражеское существо
+                        const randomIndex = Math.floor(Math.random() * targetTeam.board.length);
+                        const target = targetTeam.board[randomIndex];
+                        
+                        // Проверяем скрытность
+                        if (target.abilities.some(a => a.includes('Скрытность'))) {
+                            addLog(`${target.name} скрыт и не может быть атакован`, 'spell');
+                            return;
+                        }
+                        
+                        // Проверяем провокацию
+                        const tauntCreatures = targetTeam.board.filter(c => 
+                            c.abilities.some(a => a.includes('Провокация'))
+                        );
+                        
+                        let finalTarget = target;
+                        if (tauntCreatures.length > 0) {
+                            // Атакуем существо с провокацией
+                            finalTarget = tauntCreatures[Math.floor(Math.random() * tauntCreatures.length)];
+                        }
+                        
+                        // Расчет урона
+                        let damage = attacker.attack;
+                        if (finalTarget.abilities.some(a => a.includes('Щит'))) {
+                            damage = Math.max(0, damage - 1);
+                        }
+                        
+                        // Контратака
+                        let counterDamage = 0;
+                        if (finalTarget.health > 0) {
+                            counterDamage = finalTarget.attack;
+                            if (attacker.abilities.some(a => a.includes('Щит'))) {
+                                counterDamage = Math.max(0, counterDamage - 1);
+                            }
+                        }
+                        
+                        // Применяем урон
+                        finalTarget.health -= damage;
+                        if (finalTarget.health <= 0) {
+                            const targetIndex = targetTeam.board.indexOf(finalTarget);
+                            if (targetIndex !== -1) {
+                                targetTeam.board.splice(targetIndex, 1);
+                            }
+                            addLog(`${attacker.name} уничтожает ${finalTarget.name}!`, 'attack');
+                        } else {
+                            addLog(`${attacker.name} атакует ${finalTarget.name} (${damage} урона)`, 'attack');
+                            
+                            // Контратака
+                            if (counterDamage > 0) {
+                                attacker.health -= counterDamage;
+                                if (attacker.health <= 0) {
+                                    const attackerIndex = attackerTeam.board.indexOf(attacker);
+                                    if (attackerIndex !== -1) {
+                                        attackerTeam.board.splice(attackerIndex, 1);
+                                    }
+                                    addLog(`${finalTarget.name} контратакует и уничтожает ${attacker.name}!`, 'attack');
+                                } else {
+                                    addLog(`${finalTarget.name} контратакует (${counterDamage} урона)`, 'attack');
+                                }
+                            }
+                        }
+                        
+                        gameState.totalDamage += damage + counterDamage;
+                        attacked = true;
+                        
+                    } else {
+                        // Атакуем героя, если нет существ
+                        targetTeam.health -= attacker.attack;
+                        gameState.totalDamage += attacker.attack;
+                        addLog(`${attacker.name} атакует героя (${attacker.attack} урона)`, 'attack');
+                        
+                        if (targetTeam.health <= 0) {
+                            targetTeam.health = 0;
+                            endGame(currentTeam);
+                        }
+                        
+                        attacked = true;
+                    }
+                    
+                    attacker.canAttack = false;
+                }
+            });
+            
+            return attacked;
+        }
+        
+        // Завершение хода
+        function endTurn() {
+            // Сбрасываем состояние атак
+            const currentTeam = gameState.currentTurn;
+            const teamObj = currentTeam === 'A' ? gameState.teamA : gameState.teamB;
+            
+            teamObj.board.forEach(creature => {
+                creature.canAttack = true;
+            });
+            
+            // Передаем ход
+            gameState.currentTurn = gameState.currentTurn === 'A' ? 'B' : 'A';
+            
+            if (gameState.currentTurn === 'A') {
+                gameState.turnNumber++;
+            }
+            
+            // Восстанавливаем и увеличиваем ману
+            const newTeam = gameState.currentTurn === 'A' ? gameState.teamA : gameState.teamB;
+            newTeam.maxMana = Math.min(newTeam.maxMana + 1, 10);
+            newTeam.mana = newTeam.maxMana;
+            
+            // Берем карту
+            drawCard(gameState.currentTurn);
+            
+            addLog(`Ход ${gameState.turnNumber}: теперь ходит ${gameState.currentTurn === 'A' ? 'Команда A' : 'Команда B'}`, 'turn');
+            
+            gameState.selectedCard = null;
+        }
+        
+        // Конец игры
+        function endGame(winner) {
+            gameState.gameOver = true;
+            gameState.gameStarted = false;
+            
+            const winnerName = winner === 'A' ? 'Команда A' : 'Команда B';
+            
+            // Обновляем статистику победы
+            elements.victoryTeam.textContent = winnerName;
+            elements.victoryTeam.className = winner === 'A' ? 'victory-team victory-a' : 'victory-team victory-b';
+            elements.victoryTurn.textContent = gameState.turnNumber;
+            elements.victoryCards.textContent = gameState.totalCardsPlayed;
+            elements.victoryDamage.textContent = gameState.totalDamage;
+            
+            addLog(`🎉 ${winnerName} побеждает! 🎉`, 'turn');
+            
+            // Показываем экран победы
+            setTimeout(() => {
+                elements.victoryScreen.style.display = 'flex';
+            }, 1000);
+        }
+        
+        // Создание элемента карты
+        function createCardElement(card, location) {
+            const div = document.createElement('div');
+            div.className = `card card-${card.type}`;
+            div.dataset.id = card.id;
+            div.dataset.location = location;
+            
+            if (gameState.selectedCard === card.id) {
+                div.classList.add('selected');
+            }
+            
+            if (location === 'hand' && gameState.gameStarted) {
+                const currentTeam = gameState.currentTurn;
+                const teamObj = currentTeam === 'A' ? gameState.teamA : gameState.teamB;
+                
+                if (teamObj.mana < card.cost) {
+                    div.classList.add('disabled');
+                }
+            }
+            
+            // Аватар или placeholder
+            let avatarHtml = '';
+            if (card.avatar && !card.avatarError) {
+                avatarHtml = `<img class="card-avatar" src="${card.avatar}" alt="${card.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`;
+            }
+            
+            const placeholderIcon = card.type === 'creature' ? 'fa-dragon' : 
+                                  card.type === 'spell' ? 'fa-fire' : 'fa-gem';
+            
+            div.innerHTML = `
+                ${avatarHtml}
+                <div class="avatar-placeholder" style="${card.avatar && !card.avatarError ? 'display:none' : ''}">
+                    <i class="fas ${placeholderIcon}"></i>
+                </div>
+                ${card.avatarError ? '<div class="avatar-error">Ошибка аватара</div>' : ''}
+                
+                <div class="card-type type-${card.type}">
+                    ${card.type === 'creature' ? 'Существо' : card.type === 'spell' ? 'Заклинание' : 'Артефакт'}
+                </div>
+                
+                ${location === 'hand' ? `<div class="card-cost">${card.cost}</div>` : ''}
+                
+                <div class="card-name">${card.name}</div>
+                
+                ${card.type !== 'spell' ? `
+                    <div class="card-stats">
+                        <div class="stat-attack">
+                            <i class="fas fa-fist-raised"></i> ${card.attack}
+                        </div>
+                        <div class="stat-health">
+                            <i class="fas fa-heart"></i> ${card.health}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${card.abilities.length > 0 ? `
+                    <div class="card-abilities">
+                        ${card.abilities.slice(0, 3).map(a => 
+                            `<span class="ability-tag">${a.split(' ')[0]}</span>`
+                        ).join('')}
+                    </div>
+                ` : ''}
+                
+                ${location === 'board' && card.canAttack ? '<div class="card-can-attack"></div>' : ''}
+            `;
+            
+            // Обработчики событий
+            div.addEventListener('click', () => handleCardClick(card.id, location));
+            div.addEventListener('dblclick', () => showCardDetails(card));
+            
+            return div;
+        }
+        
+        // Обработка клика по карте
+        function handleCardClick(cardId, location) {
+            if (!gameState.gameStarted || gameState.gameOver) return;
+            
+            const currentTeam = gameState.currentTurn;
+            const teamObj = currentTeam === 'A' ? gameState.teamA : gameState.teamB;
+            
+            if (location === 'hand') {
+                // Карта в руке
+                if (gameState.selectedCard === cardId) {
+                    gameState.selectedCard = null;
+                } else {
+                    const card = teamObj.hand.find(c => c.id === cardId);
+                    if (card && teamObj.mana >= card.cost) {
+                        gameState.selectedCard = cardId;
+                    }
+                }
+            } else if (location === 'board') {
+                // Карта на поле
+                if (gameState.selectedCard) {
+                    // Если уже выбрана карта для атаки
+                    const selectedCard = teamObj.board.find(c => c.id === gameState.selectedCard);
+                    if (selectedCard && selectedCard.canAttack) {
+                        // Это атака
+                        gameState.selectedCard = null;
+                    }
+                } else {
+                    // Выбираем карту для атаки
+                    const card = teamObj.board.find(c => c.id === cardId);
+                    if (card && card.canAttack) {
+                        gameState.selectedCard = cardId;
+                    }
+                }
+            }
+            
+            updateUI();
+        }
+        
+        // Показать детали карты
+        function showCardDetails(card) {
+            elements.modalCardName.textContent = card.name;
+            elements.modalCardCost.textContent = card.cost;
+            elements.modalCardAttack.textContent = card.attack;
+            elements.modalCardHealth.textContent = card.health;
+            elements.modalCardType.textContent = card.type === 'creature' ? 'Существо' : 
+                                               card.type === 'spell' ? 'Заклинание' : 'Артефакт';
+            elements.modalCardAbilities.innerHTML = card.abilities.length > 0 
+                ? card.abilities.map(a => `<div>• ${a}</div>`).join('')
+                : 'Нет';
+            elements.modalCardDescription.textContent = card.description;
+            elements.modalCardCreator.textContent = card.creator;
+            
+            // Аватар
+            elements.modalAvatarContainer.innerHTML = '';
+            if (card.avatar && !card.avatarError) {
+                const img = document.createElement('img');
+                img.src = card.avatar;
+                img.style.width = '100%';
+                img.style.height = '200px';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '10px';
+                img.onerror = () => {
+                    elements.modalAvatarContainer.innerHTML = `
+                        <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 10px; color: rgba(255,255,255,0.3);">
+                            <i class="fas fa-${card.type === 'creature' ? 'dragon' : card.type === 'spell' ? 'fire' : 'gem'} fa-3x"></i>
+                        </div>
+                    `;
+                };
+                elements.modalAvatarContainer.appendChild(img);
+            } else {
+                elements.modalAvatarContainer.innerHTML = `
+                    <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 10px; color: rgba(255,255,255,0.3);">
+                        <i class="fas fa-${card.type === 'creature' ? 'dragon' : card.type === 'spell' ? 'fire' : 'gem'} fa-3x"></i>
+                    </div>
+                `;
+            }
+            
+            elements.cardModal.style.display = 'flex';
+        }
+        
+        // Обновление UI
+        function updateUI() {
+            // Обновляем статистику команд
+            elements.teamAMana.textContent = gameState.teamA.mana;
+            elements.teamAHealth.textContent = gameState.teamA.health;
+            elements.teamBMana.textContent = gameState.teamB.mana;
+            elements.teamBHealth.textContent = gameState.teamB.health;
+            
+            // Обновляем индикатор хода
+            elements.currentTeam.textContent = gameState.currentTurn === 'A' ? 'Команда A' : 'Команда B';
+            elements.currentTeam.className = gameState.currentTurn === 'A' ? 'turn-team turn-a' : 'turn-team turn-b';
+            elements.turnNumber.textContent = `Ход ${gameState.turnNumber}`;
+            
+            // Обновляем карты
+            updateCardsContainer(elements.teamAHand, gameState.teamA.hand, 'hand');
+            updateCardsContainer(elements.teamABoard, gameState.teamA.board, 'board');
+            updateCardsContainer(elements.teamBHand, gameState.teamB.hand, 'hand');
+            updateCardsContainer(elements.teamBBoard, gameState.teamB.board, 'board');
+            
+            // Обновляем состояние кнопок
+            updateButtonsState();
+        }
+        
+        // Обновление контейнера с картами
+        function updateCardsContainer(container, cards, location) {
+            container.innerHTML = '';
+            
+            if (cards.length === 0) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.className = 'empty-message';
+                emptyMsg.textContent = location === 'hand' ? 'Рука пуста' : 'Поле боя пусто';
+                container.appendChild(emptyMsg);
+                return;
+            }
+            
+            cards.forEach(card => {
+                const cardElement = createCardElement(card, location);
+                container.appendChild(cardElement);
+            });
+        }
+        
+        // Обновление состояния кнопок
+        function updateButtonsState() {
+            const gameActive = gameState.gameStarted && !gameState.gameOver;
+            
+            elements.endTurnBtn.disabled = !gameActive;
+            elements.drawCardBtn.disabled = !gameActive || 
+                (gameState.currentTurn === 'A' ? gameState.teamA.deck.length === 0 : gameState.teamB.deck.length === 0);
+            
+            if (gameActive && gameState.selectedCard) {
+                const currentTeam = gameState.currentTurn;
+                const teamObj = currentTeam === 'A' ? gameState.teamA : gameState.teamB;
+                const card = teamObj.hand.find(c => c.id === gameState.selectedCard);
+                
+                if (card && teamObj.mana >= card.cost) {
+                    elements.playCardBtn.disabled = false;
+                } else {
+                    elements.playCardBtn.disabled = true;
+                }
+                
+                // Проверяем, можно ли атаковать выбранной картой
+                const boardCard = teamObj.board.find(c => c.id === gameState.selectedCard);
+                elements.attackBtn.disabled = !(boardCard && boardCard.canAttack);
+            } else {
+                elements.playCardBtn.disabled = true;
+                elements.attackBtn.disabled = true;
+            }
+            
+            elements.startGameBtn.disabled = gameState.teamA.deck.length === 0 || gameState.teamB.deck.length === 0;
+        }
+        
+        // Вспомогательные функции
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // Тестовый режим
+        function enableTestMode() {
+            if (gameState.teamA.deck.length === 0 || gameState.teamB.deck.length === 0) {
+                addLog('Сначала загрузите карты!', 'attack');
+                return;
+            }
+            
+            gameState.teamA.mana = 99;
+            gameState.teamB.mana = 99;
+            gameState.teamA.health = 100;
+            gameState.teamB.health = 100;
+            
+            addLog('Тестовый режим активирован!', 'spell');
+            updateUI();
+        }
+        
+        // Очистка карт
+        function clearCards() {
+            gameState.teamA.deck = [];
+            gameState.teamB.deck = [];
+            elements.teamAInput.value = '';
+            elements.teamBInput.value = '';
+            
+            updateLoadInfo();
+            resetGame();
+            addLog('Все карты очищены', 'turn');
+        }
+        
+        // Сброс игры
+        function resetGame() {
+            gameState.currentTurn = 'A';
+            gameState.turnNumber = 1;
+            gameState.selectedCard = null;
+            gameState.gameStarted = false;
+            gameState.gameOver = false;
+            gameState.totalDamage = 0;
+            gameState.totalCardsPlayed = 0;
+            
+            gameState.teamA.mana = 10;
+            gameState.teamA.maxMana = 10;
+            gameState.teamA.health = 30;
+            gameState.teamA.hand = [];
+            gameState.teamA.board = [];
+            
+            gameState.teamB.mana = 10;
+            gameState.teamB.maxMana = 10;
+            gameState.teamB.health = 30;
+            gameState.teamB.hand = [];
+            gameState.teamB.board = [];
+            
+            gameState.logs = [
+                { message: 'Добро пожаловать в BattleScript Core!', type: 'turn', timestamp: new Date().toLocaleTimeString() },
+                { message: 'Загрузите карты команд и начните игру', type: 'normal', timestamp: new Date().toLocaleTimeString() }
+            ];
+            
+            elements.victoryScreen.style.display = 'none';
+            updateUI();
+            updateLogUI();
+        }
+        
+        // Показать помощь
+        function showHelp() {
+            addLog('=== Помощь по игре ===', 'turn');
+            addLog('1. Загрузите .md файлы карт для обеих команд', 'spell');
+            addLog('2. Нажмите "Начать игру"', 'spell');
+            addLog('3. Существа автоматически атакуют врагов', 'spell');
+            addLog('4. Заклинания применяются сразу при розыгрыше', 'spell');
+            addLog('5. Артефакты улучшают случайное союзное существо', 'spell');
+            addLog('6. Нажмите "Авто-атака" для атаки всеми существами', 'spell');
+        }
+        
+        // Инициализация событий
+        function initEventListeners() {
+            // Кнопки игры
+            elements.endTurnBtn.addEventListener('click', () => {
+                if (gameState.gameStarted && !gameState.gameOver) {
+                    endTurn();
+                    updateUI();
+                }
+            });
+            
+            elements.drawCardBtn.addEventListener('click', () => {
+                if (gameState.gameStarted && !gameState.gameOver) {
+                    drawCard(gameState.currentTurn);
+                    updateUI();
+                }
+            });
+            
+            elements.playCardBtn.addEventListener('click', () => {
+                if (gameState.gameStarted && !gameState.gameOver && gameState.selectedCard) {
+                    if (playCard(gameState.selectedCard)) {
+                        updateUI();
+                    }
+                }
+            });
+            
+            elements.attackBtn.addEventListener('click', () => {
+                if (gameState.gameStarted && !gameState.gameOver) {
+                    if (autoAttack()) {
+                        updateUI();
+                    }
+                }
+            });
+            
+            elements.restartBtn.addEventListener('click', resetGame);
+            elements.startGameBtn.addEventListener('click', initGame);
+            elements.testModeBtn.addEventListener('click', enableTestMode);
+            elements.clearCardsBtn.addEventListener('click', clearCards);
+            elements.helpBtn.addEventListener('click', showHelp);
+            elements.newGameBtn.addEventListener('click', () => {
+                elements.victoryScreen.style.display = 'none';
+                resetGame();
+            });
+            
+            // Файловые инпуты
+            elements.teamAInput.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    elements.loadingIndicator.style.display = 'flex';
+                    gameState.teamA.deck = await loadCardsFromFiles(files, 'A');
+                    updateLoadInfo();
+                    elements.loadingIndicator.style.display = 'none';
+                    addLog(`Загружено ${files.length} карт для Команды A`, 'spell');
+                }
+            });
+            
+            elements.teamBInput.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    elements.loadingIndicator.style.display = 'flex';
+                    gameState.teamB.deck = await loadCardsFromFiles(files, 'B');
+                    updateLoadInfo();
+                    elements.loadingIndicator.style.display = 'none';
+                    addLog(`Загружено ${files.length} карт для Команды B`, 'spell');
+                }
+            });
+            
+            // Модальные окна
+            document.getElementById('closeModalBtn').addEventListener('click', () => {
+                elements.cardModal.style.display = 'none';
+            });
+            
+            window.addEventListener('click', (e) => {
+                if (e.target === elements.cardModal) {
+                    elements.cardModal.style.display = 'none';
+                }
+                if (e.target === elements.victoryScreen) {
+                    elements.victoryScreen.style.display = 'none';
+                }
+            });
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            initEventListeners();
+            resetGame();
+        });
+    </script>
+</body>
+</html>
