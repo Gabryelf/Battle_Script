@@ -309,6 +309,66 @@ input:focus, select:focus, textarea:focus {
     left: 0;
 }
 
+/* Фиксированная панель управления */
+.fixed-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(15, 23, 42, 0.95);
+    border-top: 2px solid rgba(255, 255, 255, 0.1);
+    padding: 15px 20px;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.controls-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.control-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+    min-height: 44px;
+}
+
+/* Основной контейнер игры с отступом для фиксированной панели */
+.game-content {
+    padding-bottom: 100px; /* Отступ для фиксированных кнопок */
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .controls-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .control-btn {
+        font-size: 0.9rem;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .controls-container {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
     h1 {
