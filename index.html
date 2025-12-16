@@ -2,1056 +2,365 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BattleScript - Расширенная версия</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BattleScript</title>
+    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Основные стили */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #e2e8f0;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .screen {
-            display: none;
-            min-height: 100vh;
-        }
-        
-        .screen.active {
-            display: block;
-        }
-        
-        /* Главный экран */
-        #mainScreen {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #4f46e5, #06b6d4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .subtitle {
-            color: #94a3b8;
-            font-size: 1.2rem;
-        }
-        
-        .server-info {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 25px;
-            margin: 30px auto;
-            max-width: 800px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .connection-status {
-            display: inline-block;
-            padding: 12px 24px;
-            border-radius: 25px;
-            margin: 15px 0;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
-        .connected {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 2px solid #22c55e;
-        }
-        
-        .disconnected {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 2px solid #ef4444;
-        }
-        
-        .team-selection {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin: 50px auto;
-            max-width: 1000px;
-        }
-        
-        @media (max-width: 768px) {
-            .team-selection {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .team-option {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 3px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .team-option::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transition: left 0.5s;
-        }
-        
-        .team-option:hover::before {
-            left: 100%;
-        }
-        
-        .team-option:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-        }
-        
-        .team-a:hover {
-            border-color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-        }
-        
-        .team-b:hover {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
-        }
-        
-        .team-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-        }
-        
-        .team-a .team-icon {
-            color: #ef4444;
-        }
-        
-        .team-b .team-icon {
-            color: #3b82f6;
-        }
-        
-        .team-title {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-        
-        .team-players {
-            color: #94a3b8;
-            margin: 15px 0;
-            font-size: 1.1rem;
-        }
-        
-        .team-status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-        }
-        
-        .status-ready {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 1px solid #22c55e;
-        }
-        
-        .status-not-ready {
-            background: rgba(251, 191, 36, 0.2);
-            color: #fbbf24;
-            border: 1px solid #fbbf24;
-        }
-        
-        /* Игровой экран */
-        #gameScreen {
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        
-        .game-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .turn-indicator {
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
-        .turn-a {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 2px solid #ef4444;
-        }
-        
-        .turn-b {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-            border: 2px solid #3b82f6;
-        }
-        
-        .game-board {
-            display: grid;
-            grid-template-columns: 1fr 400px 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        @media (max-width: 1200px) {
-            .game-board {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .team-section {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 25px;
-            border: 2px solid;
-            min-height: 600px;
-        }
-        
-        .team-a-section {
-            border-color: #ef4444;
-        }
-        
-        .team-b-section {
-            border-color: #3b82f6;
-        }
-        
-        .team-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .mana-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px 15px;
-            border-radius: 10px;
-        }
-        
-        .mana-icon {
-            color: #60a5fa;
-            font-size: 1.5rem;
-        }
-        
-        .health-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px 15px;
-            border-radius: 10px;
-        }
-        
-        .health-icon {
-            color: #f87171;
-            font-size: 1.5rem;
-        }
-        
-        .cards-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 15px;
-            min-height: 200px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-            border-radius: 12px;
-            padding: 15px;
-            text-align: center;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s;
-            height: 220px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-        
-        .card.selected {
-            border-color: #fbbf24;
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
-        }
-        
-        .card-creature {
-            border-color: #22c55e;
-        }
-        
-        .card-spell {
-            border-color: #8b5cf6;
-        }
-        
-        .card-artifact {
-            border-color: #f59e0b;
-        }
-        
-        .card-cost {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #8b5cf6;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
-        .card-name {
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-            color: #f8fafc;
-        }
-        
-        .card-stats {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 10px 0;
-        }
-        
-        .stat {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .stat-value {
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-        
-        .stat-label {
-            font-size: 0.8rem;
-            color: #94a3b8;
-        }
-        
-        .card-abilities {
-            margin-top: 10px;
-            font-size: 0.8rem;
-            color: #60a5fa;
-        }
-        
-        .ability-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            margin: 2px;
-            background: rgba(96, 165, 250, 0.2);
-            border-radius: 4px;
-            font-size: 0.75rem;
-        }
-        
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            padding: 25px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .btn {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(90deg, #4f46e5, #6366f1);
-            color: white;
-        }
-        
-        .btn-success {
-            background: linear-gradient(90deg, #059669, #10b981);
-            color: white;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(90deg, #dc2626, #ef4444);
-            color: white;
-        }
-        
-        .btn-warning {
-            background: linear-gradient(90deg, #d97706, #f59e0b);
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #e2e8f0;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-        
-        .btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-        }
-        
-        .turn-info {
-            text-align: center;
-            margin-top: 20px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .timer {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #fbbf24;
-            margin: 10px 0;
-        }
-        
-        /* Индикатор загрузки */
-        .loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            color: white;
-            display: none;
-        }
-        
-        .loading.active {
-            display: flex;
-        }
-        
-        .loading-spinner {
-            width: 80px;
-            height: 80px;
-            border: 8px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #60a5fa;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 30px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Экран создателя карт */
-        .creator-grid {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 30px;
-            margin-top: 30px;
-        }
-        
-        .card-preview {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-            border-radius: 20px;
-            padding: 30px;
-            height: 500px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .card-form {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #cbd5e1;
-            font-weight: 500;
-        }
-        
-        input, select, textarea {
-            width: 100%;
-            padding: 12px 15px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            color: white;
-            font-size: 1rem;
-        }
-        
-        textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-        
-        .ability-selector {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .ability-option {
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-        
-        .ability-option.selected {
-            background: rgba(96, 165, 250, 0.2);
-            border-color: #60a5fa;
-        }
-        
-        /* Журнал боя */
-        .game-log {
-            margin-top: 30px;
-            padding: 25px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .log-entries {
-            height: 300px;
-            overflow-y: auto;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .log-entry {
-            padding: 10px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            border-left: 4px solid;
-            font-size: 0.9rem;
-        }
-        
-        .log-info {
-            border-left-color: #60a5fa;
-        }
-        
-        .log-success {
-            border-left-color: #22c55e;
-        }
-        
-        .log-danger {
-            border-left-color: #ef4444;
-        }
-        
-        .log-warning {
-            border-left-color: #fbbf24;
-        }
-        
-        .chat-container {
-            margin-top: 20px;
-        }
-        
-        .chat-input {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .chat-input input {
-            flex: 1;
-        }
-        
-        /* Модальные окна */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .modal-title {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .modal-message {
-            margin-bottom: 30px;
-            text-align: center;
-            color: #cbd5e1;
-        }
-        
-        .modal-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-        
-        /* Анимации */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-    </style>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
 </head>
 <body>
+    <!-- Частицы на фоне -->
+    <div id="particles"></div>
+    
     <!-- Индикатор загрузки -->
-    <div class="loading" id="loading">
-        <div class="loading-spinner"></div>
-        <div id="loadingMessage" style="font-size: 1.2rem; margin-top: 20px;">Подключение к серверу...</div>
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Подключение к серверу...</div>
+            <div class="loading-details" id="loadingDetails"></div>
+        </div>
     </div>
     
     <!-- Главный экран -->
-    <div id="mainScreen" class="screen active">
-        <header class="fade-in">
-            <h1><i class="fas fa-crosshairs"></i> BattleScript</h1>
-            <p class="subtitle">Тактическая карточная игра с расширенными правилами</p>
+    <div id="mainScreen" class="screen active-screen">
+        <header class="main-header">
+            <div class="title-container">
+                <h1 class="game-title">
+                    <i class="fas fa-crosshairs"></i> 
+                    <span class="title-text">BattleScript</span>
+                </h1>
+                <p class="game-subtitle">Тактическая карточная дуэль 1 на 1</p>
+            </div>
         </header>
         
-        <div class="server-info fade-in">
-            <h3><i class="fas fa-server"></i> Статус сервера</h3>
-            <div id="serverAddress" style="margin: 10px 0; font-family: monospace; font-size: 1.1rem;">
-                Подключение...
-            </div>
-            <div id="connectionStatus" class="connection-status disconnected">
-                <i class="fas fa-plug"></i> Ожидание подключения
-            </div>
-            <div style="margin-top: 20px; color: #94a3b8; font-size: 0.9rem;">
-                <p><i class="fas fa-info-circle"></i> Все игроки должны быть в одной локальной сети</p>
-                <p><i class="fas fa-clock"></i> Ход длится 2 минуты, затем передается автоматически</p>
-            </div>
-        </div>
-        
-        <div class="team-selection fade-in">
-            <div class="team-option team-a" onclick="joinTeam('A')">
-                <div class="team-icon">
-                    <i class="fas fa-dragon"></i>
+        <main class="main-content">
+            <div class="server-status-card">
+                <div class="status-header">
+                    <i class="fas fa-server"></i>
+                    <h3>Статус сервера</h3>
                 </div>
-                <h2 class="team-title">Команда А</h2>
-                <p>Красные Агрессоры</p>
-                <p class="team-players" id="teamAPlayers"><i class="fas fa-users"></i> Игроков: 0</p>
-                <div class="team-status status-not-ready">
-                    <i class="fas fa-clock"></i> Ожидает карты
+                <div class="status-body">
+                    <div class="connection-info">
+                        <div class="info-row">
+                            <span class="info-label">Адрес:</span>
+                            <span class="info-value" id="serverAddress">Подключение...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Статус:</span>
+                            <div class="connection-status" id="connectionStatus">
+                                <i class="fas fa-plug"></i>
+                                <span>Ожидание подключения</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="server-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-users"></i>
+                            <div class="stat-content">
+                                <span class="stat-value" id="onlinePlayers">0</span>
+                                <span class="stat-label">онлайн</span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-cards"></i>
+                            <div class="stat-content">
+                                <span class="stat-value" id="totalCards">0</span>
+                                <span class="stat-label">карт</span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-bolt"></i>
+                            <div class="stat-content">
+                                <span class="stat-value" id="activeGames">0</span>
+                                <span class="stat-label">игры</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button class="btn btn-primary" style="margin-top: 20px;">
-                    <i class="fas fa-sign-in-alt"></i> Присоединиться
-                </button>
             </div>
             
-            <div class="team-option team-b" onclick="joinTeam('B')">
-                <div class="team-icon">
-                    <i class="fas fa-shield-alt"></i>
+            <div class="player-section">
+                <div class="player-card" id="playerCard">
+                    <div class="player-card-header">
+                        <h3><i class="fas fa-user"></i> Ваш профиль</h3>
+                    </div>
+                    <div class="player-card-body">
+                        <div class="player-info" id="playerInfo">
+                            <div class="info-row">
+                                <span class="info-label">Имя:</span>
+                                <span class="info-value" id="playerNameDisplay">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Статус:</span>
+                                <span class="status-badge disconnected" id="playerStatus">
+                                    <i class="fas fa-sign-out-alt"></i> Не в игре
+                                </span>
+                            </div>
+                        </div>
+                        <div class="player-actions">
+                            <button class="btn btn-primary" id="enterNameBtn">
+                                <i class="fas fa-sign-in-alt"></i> Войти в игру
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <h2 class="team-title">Команда B</h2>
-                <p>Синие Защитники</p>
-                <p class="team-players" id="teamBPlayers"><i class="fas fa-users"></i> Игроков: 0</p>
-                <div class="team-status status-not-ready">
-                    <i class="fas fa-clock"></i> Ожидает карты
+                
+                <div class="quick-actions">
+                    <button class="quick-action-btn" id="quickJoinBtn">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Быстрый старт</span>
+                    </button>
+                    <button class="quick-action-btn" id="findOpponentBtn">
+                        <i class="fas fa-search"></i>
+                        <span>Найти противника</span>
+                    </button>
+                    <button class="quick-action-btn" id="spectateBtn">
+                        <i class="fas fa-eye"></i>
+                        <span>Наблюдать</span>
+                    </button>
                 </div>
-                <button class="btn btn-primary" style="margin-top: 20px;">
-                    <i class="fas fa-sign-in-alt"></i> Присоединиться
-                </button>
             </div>
-        </div>
-        
-        <div style="text-align: center; margin-top: 50px;" class="fade-in">
-            <button class="btn btn-secondary" onclick="showCreator()" style="margin: 0 10px;">
-                <i class="fas fa-plus-circle"></i> Создать карты
-            </button>
-            <button class="btn btn-secondary" onclick="spectateGame()" style="margin: 0 10px;">
-                <i class="fas fa-eye"></i> Наблюдать
-            </button>
-            <button class="btn btn-secondary" onclick="showRules()" style="margin: 0 10px;">
-                <i class="fas fa-book"></i> Правила
-            </button>
-        </div>
+            
+            <div class="game-info">
+                <div class="info-card">
+                    <h3><i class="fas fa-info-circle"></i> Правила игры</h3>
+                    <div class="rules-list">
+                        <div class="rule-item">
+                            <i class="fas fa-users"></i>
+                            <div>
+                                <strong>1 на 1</strong>
+                                <p>Только два игрока, остальные наблюдают</p>
+                            </div>
+                        </div>
+                        <div class="rule-item">
+                            <i class="fas fa-cards"></i>
+                            <div>
+                                <strong>Готовые карты</strong>
+                                <p>Баланс настроен администратором</p>
+                            </div>
+                        </div>
+                        <div class="rule-item">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <strong>Быстрая игра</strong>
+                                <p>Ход - 2 минуты, игра - до победы</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cards-preview">
+                    <h3><i class="fas fa-crown"></i> Лучшие карты</h3>
+                    <div class="preview-cards" id="topCards">
+                        <!-- Карты будут загружены через JS -->
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
     
     <!-- Экран игры -->
     <div id="gameScreen" class="screen">
         <div class="game-header">
-            <div>
-                <h2 id="gameTitle">BattleScript</h2>
-                <div style="color: #94a3b8; font-size: 0.9rem;">Игрок: <span id="playerNameDisplay">-</span></div>
+            <div class="game-info-left">
+                <div class="game-title-small">
+                    <i class="fas fa-crosshairs"></i> 
+                    <span>BattleScript</span>
+                </div>
+                <div class="player-display">
+                    <span class="player-name" id="gamePlayerName">-</span>
+                    <span class="player-badge" id="gamePlayerBadge">Игрок</span>
+                </div>
             </div>
             
-            <div id="turnIndicator" class="turn-indicator turn-a">
-                <i class="fas fa-hourglass-half"></i> Ожидание начала
+            <div class="game-state">
+                <div class="turn-indicator" id="turnIndicator">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span>Ожидание игры...</span>
+                </div>
+                <div class="game-timer" id="gameTimer">
+                    <i class="fas fa-clock"></i>
+                    <span>02:00</span>
+                </div>
             </div>
             
-            <div>
-                <button class="btn btn-secondary" onclick="showMainScreen()">
-                    <i class="fas fa-home"></i> Выйти
+            <div class="game-controls-top">
+                <button class="icon-btn" id="menuBtn" title="Меню">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <button class="icon-btn" id="soundBtn" title="Звук">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <button class="icon-btn btn-exit" id="exitGameBtn" title="Выйти">
+                    <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
         </div>
         
-        <!-- Панель состояния игры -->
-        <div style="background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div>Ход: <span id="turnNumber" style="font-weight: bold;">1</span></div>
-                    <div>Сейчас ходит: <span id="currentTeam" style="font-weight: bold;">-</span></div>
-                </div>
-                <div class="timer" id="turnTimer">02:00</div>
-                <div id="battleStatus">
-                    <div class="team-status status-not-ready">
-                        <i class="fas fa-exclamation-triangle"></i> Ожидание подтверждения боя
-                    </div>
-                </div>
-            </div>
-        </div>
-        
+        <!-- Игровое поле -->
         <div class="game-board">
-            <!-- Команда A -->
-            <div class="team-section team-a-section">
-                <div class="team-header">
-                    <h2 class="team-title" style="color: #ef4444;">
-                        <i class="fas fa-dragon"></i> Команда A
-                    </h2>
-                    <div class="mana-bar">
-                        <i class="fas fa-gem mana-icon"></i>
-                        <div>
-                            <div style="font-weight: bold; font-size: 1.2rem;" id="teamAMana">3</div>
-                            <div style="font-size: 0.8rem; color: #94a3b8;">из <span id="teamAMaxMana">3</span></div>
+            <!-- Противник (сверху) -->
+            <div class="opponent-section">
+                <div class="player-header opponent-header">
+                    <div class="player-identity">
+                        <i class="fas fa-skull-crossbones opponent-icon"></i>
+                        <div class="player-info">
+                            <div class="player-name" id="opponentName">Противник</div>
+                            <div class="player-status" id="opponentStatus">Ожидание...</div>
                         </div>
                     </div>
-                    <div class="health-bar">
-                        <i class="fas fa-heart health-icon"></i>
-                        <div style="font-weight: bold; font-size: 1.2rem;" id="teamAHealth">30</div>
+                    
+                    <div class="player-stats">
+                        <div class="stat-display mana-display">
+                            <i class="fas fa-gem"></i>
+                            <div class="stat-value">
+                                <span id="opponentMana">3</span>
+                                <span class="stat-separator">/</span>
+                                <span id="opponentMaxMana">3</span>
+                            </div>
+                        </div>
+                        <div class="stat-display health-display">
+                            <i class="fas fa-heart"></i>
+                            <div class="stat-value">
+                                <span id="opponentHealth">30</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <h3><i class="fas fa-chess-board"></i> Поле боя</h3>
-                <div class="cards-container" id="teamABoard">
-                    <!-- Существа команды A будут здесь -->
-                    <div style="text-align: center; padding: 40px; color: #64748b;">
-                        <i class="fas fa-ghost" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <p>Нет существ на поле</p>
+                <div class="board-section">
+                    <div class="board-title">
+                        <i class="fas fa-chess-board"></i>
+                        <span>Поле противника</span>
+                    </div>
+                    <div class="cards-container" id="opponentBoard">
+                        <!-- Карты противника -->
                     </div>
                 </div>
                 
-                <h3 style="margin-top: 30px;"><i class="fas fa-hand-paper"></i> Рука</h3>
-                <div class="cards-container" id="teamAHand">
-                    <!-- Карты в руке команды A -->
-                    <div style="text-align: center; padding: 40px; color: #64748b;">
-                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <p>Рука пуста</p>
+                <div class="hand-section opponent-hand">
+                    <div class="hand-title">
+                        <i class="fas fa-hand-paper"></i>
+                        <span>Рука противника (<span id="opponentHandCount">0</span>)</span>
+                    </div>
+                    <div class="hand-container" id="opponentHand">
+                        <!-- Рука противника -->
                     </div>
                 </div>
             </div>
             
-            <!-- Центральные контролы -->
-            <div class="controls">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h3><i class="fas fa-gamepad"></i> Управление</h3>
-                    <p style="color: #94a3b8; font-size: 0.9rem;">Выберите карту для игры</p>
+            <!-- Центральная линия -->
+            <div class="battle-line"></div>
+            
+            <!-- Игрок (снизу) -->
+            <div class="player-section-game">
+                <div class="hand-section player-hand">
+                    <div class="hand-title">
+                        <i class="fas fa-hand-paper"></i>
+                        <span>Ваша рука (<span id="playerHandCount">0</span>)</span>
+                    </div>
+                    <div class="hand-container" id="playerHand">
+                        <!-- Рука игрока -->
+                    </div>
                 </div>
                 
-                <button id="loadCardsBtn" class="btn btn-primary">
-                    <i class="fas fa-download"></i> Загрузить карты
-                </button>
-                
-                <button id="confirmBattleBtn" class="btn btn-success" disabled>
-                    <i class="fas fa-fist-raised"></i> Подтвердить бой
-                </button>
-                
-                <button id="drawCardBtn" class="btn btn-warning" disabled>
-                    <i class="fas fa-plus-circle"></i> Взять карту (+1 мана)
-                </button>
-                
-                <button id="increaseManaBtn" class="btn btn-secondary" disabled>
-                    <i class="fas fa-gem"></i> Увеличить ману
-                </button>
-                
-                <button id="playCardBtn" class="btn btn-success" disabled>
-                    <i class="fas fa-play"></i> Разыграть карту
-                </button>
-                
-                <button id="autoAttackBtn" class="btn btn-danger" disabled>
-                    <i class="fas fa-bolt"></i> Авто-атака
-                </button>
-                
-                <button id="endTurnBtn" class="btn btn-secondary" disabled>
-                    <i class="fas fa-forward"></i> Завершить ход
-                </button>
-                
-                <div class="turn-info">
-                    <div style="font-weight: bold; margin-bottom: 10px;">Информация о ходе</div>
-                    <div>Карт в колоде: <span id="deckSize">0</span></div>
-                    <div>Карт в руке: <span id="handSize">0</span></div>
-                    <div>Существ на поле: <span id="boardSize">0</span></div>
+                <div class="board-section">
+                    <div class="board-title">
+                        <i class="fas fa-chess-board"></i>
+                        <span>Ваше поле</span>
+                    </div>
+                    <div class="cards-container" id="playerBoard">
+                        <!-- Карты игрока -->
+                    </div>
                 </div>
                 
+                <div class="player-header player-header-game">
+                    <div class="player-identity">
+                        <i class="fas fa-user-circle player-icon"></i>
+                        <div class="player-info">
+                            <div class="player-name" id="gameCurrentPlayerName">Вы</div>
+                            <div class="player-status" id="playerGameStatus">Ожидание хода...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="player-stats">
+                        <div class="stat-display mana-display">
+                            <i class="fas fa-gem"></i>
+                            <div class="stat-value">
+                                <span id="playerMana">3</span>
+                                <span class="stat-separator">/</span>
+                                <span id="playerMaxMana">3</span>
+                            </div>
+                        </div>
+                        <div class="stat-display health-display">
+                            <i class="fas fa-heart"></i>
+                            <div class="stat-value">
+                                <span id="playerHealth">30</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Панель управления -->
+        <div class="control-panel">
+            <div class="control-grid">
+                <button class="control-btn btn-attack" id="attackBtn">
+                    <i class="fas fa-fist-raised"></i>
+                    <span>Атаковать</span>
+                </button>
+                
+                <button class="control-btn btn-play" id="playCardBtn">
+                    <i class="fas fa-play"></i>
+                    <span>Играть карту</span>
+                </button>
+                
+                <button class="control-btn btn-auto" id="autoAttackBtn">
+                    <i class="fas fa-robot"></i>
+                    <span>Авто-атака</span>
+                </button>
+                
+                <button class="control-btn btn-end-turn" id="endTurnBtn">
+                    <i class="fas fa-forward"></i>
+                    <span>Завершить ход</span>
+                </button>
+                
+                <button class="control-btn btn-draw" id="drawCardBtn">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Взять карту</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Боковая панель -->
+        <div class="side-panel">
+            <div class="panel-section game-log">
+                <div class="panel-header">
+                    <i class="fas fa-scroll"></i>
+                    <h4>Журнал боя</h4>
+                </div>
+                <div class="log-container" id="gameLog">
+                    <!-- Сообщения журнала -->
+                </div>
+            </div>
+            
+            <div class="panel-section chat-section">
+                <div class="panel-header">
+                    <i class="fas fa-comments"></i>
+                    <h4>Чат</h4>
+                </div>
                 <div class="chat-container">
-                    <h4><i class="fas fa-comments"></i> Чат команды</h4>
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Сообщения чата -->
+                    </div>
                     <div class="chat-input">
-                        <input type="text" id="chatInput" placeholder="Введите сообщение..." style="flex: 1;">
-                        <button class="btn btn-secondary" onclick="sendChatMessage()">
+                        <input type="text" id="chatInput" placeholder="Введите сообщение..." 
+                               maxlength="200">
+                        <button class="icon-btn" id="sendChatBtn">
                             <i class="fas fa-paper-plane"></i>
                         </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Команда B -->
-            <div class="team-section team-b-section">
-                <div class="team-header">
-                    <h2 class="team-title" style="color: #3b82f6;">
-                        <i class="fas fa-shield-alt"></i> Команда B
-                    </h2>
-                    <div class="mana-bar">
-                        <i class="fas fa-gem mana-icon"></i>
-                        <div>
-                            <div style="font-weight: bold; font-size: 1.2rem;" id="teamBMana">3</div>
-                            <div style="font-size: 0.8rem; color: #94a3b8;">из <span id="teamBMaxMana">3</span></div>
-                        </div>
-                    </div>
-                    <div class="health-bar">
-                        <i class="fas fa-heart health-icon"></i>
-                        <div style="font-weight: bold; font-size: 1.2rem;" id="teamBHealth">30</div>
-                    </div>
-                </div>
-                
-                <h3><i class="fas fa-chess-board"></i> Поле боя</h3>
-                <div class="cards-container" id="teamBBoard">
-                    <!-- Существа команды B будут здесь -->
-                    <div style="text-align: center; padding: 40px; color: #64748b;">
-                        <i class="fas fa-ghost" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <p>Нет существ на поле</p>
-                    </div>
-                </div>
-                
-                <h3 style="margin-top: 30px;"><i class="fas fa-hand-paper"></i> Рука</h3>
-                <div class="cards-container" id="teamBHand">
-                    <!-- Карты в руке команды B -->
-                    <div style="text-align: center; padding: 40px; color: #64748b;">
-                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <p>Рука пуста</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Журнал боя и чат -->
-        <div class="game-log">
-            <h3><i class="fas fa-scroll"></i> Журнал боя</h3>
-            <div class="log-entries" id="gameLog">
-                <!-- Логи будут добавляться сюда -->
-                <div class="log-entry log-info">
-                    <i class="fas fa-info-circle"></i> Добро пожаловать в BattleScript!
-                </div>
-            </div>
-            
-            <div style="margin-top: 20px; display: flex; gap: 15px;">
-                <button class="btn btn-secondary" onclick="clearGameLog()">
-                    <i class="fas fa-trash"></i> Очистить журнал
-                </button>
-                <button class="btn btn-secondary" onclick="exportGameLog()">
-                    <i class="fas fa-download"></i> Экспорт
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Экран создания карт -->
-    <div id="creatorScreen" class="screen">
-        <div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
-            <div class="game-header">
-                <h1><i class="fas fa-plus-circle"></i> Создатель карт</h1>
-                <button class="btn btn-secondary" onclick="showMainScreen()">
-                    <i class="fas fa-arrow-left"></i> На главную
-                </button>
-            </div>
-            
-            <div class="creator-grid">
-                <div class="card-preview">
-                    <h3>Предпросмотр карты</h3>
-                    <div id="cardPreview" style="margin-top: 20px; height: 400px; display: flex; align-items: center; justify-content: center; color: #64748b;">
-                        <div style="text-align: center;">
-                            <i class="fas fa-card" style="font-size: 4rem; margin-bottom: 20px;"></i>
-                            <p>Заполните форму для предпросмотра</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card-form">
-                    <h3>Параметры карты</h3>
-                    
-                    <div class="form-group">
-                        <label for="cardType">Тип карты:</label>
-                        <select id="cardType" onchange="updateCardPreview()">
-                            <option value="creature">Существо</option>
-                            <option value="spell">Заклинание</option>
-                            <option value="artifact">Артефакт</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cardName">Название:</label>
-                        <input type="text" id="cardName" placeholder="Введите название" oninput="updateCardPreview()">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cardCost">Стоимость (мана):</label>
-                        <input type="number" id="cardCost" min="1" max="10" value="2" oninput="updateCardPreview()">
-                    </div>
-                    
-                    <div id="creatureStats" class="form-group">
-                        <label>Характеристики:</label>
-                        <div style="display: flex; gap: 15px;">
-                            <div style="flex: 1;">
-                                <label for="cardAttack">Атака:</label>
-                                <input type="number" id="cardAttack" min="0" max="20" value="2" oninput="updateCardPreview()">
-                            </div>
-                            <div style="flex: 1;">
-                                <label for="cardHealth">Здоровье:</label>
-                                <input type="number" id="cardHealth" min="1" max="20" value="3" oninput="updateCardPreview()">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Способности:</label>
-                        <div class="ability-selector" id="abilitySelector">
-                            <!-- Способности будут добавлены через JS -->
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cardDescription">Описание:</label>
-                        <textarea id="cardDescription" placeholder="Введите описание карты..." oninput="updateCardPreview()"></textarea>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; margin-top: 30px;">
-                        <button class="btn btn-primary" onclick="saveCard()" style="flex: 1;">
-                            <i class="fas fa-save"></i> Сохранить карту
-                        </button>
-                        <button class="btn btn-secondary" onclick="loadExampleCards()" style="flex: 1;">
-                            <i class="fas fa-download"></i> Примеры карт
-                        </button>
-                        <button class="btn btn-warning" onclick="clearCreator()" style="flex: 1;">
-                            <i class="fas fa-times"></i> Очистить
-                        </button>
-                    </div>
-                    
-                    <div id="savedCards" style="margin-top: 30px;">
-                        <h4>Сохраненные карты (<span id="savedCount">0</span>)</h4>
-                        <div id="savedCardsList" style="margin-top: 15px; max-height: 200px; overflow-y: auto;">
-                            <!-- Сохраненные карты будут здесь -->
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1059,1250 +368,82 @@
     </div>
     
     <!-- Модальные окна -->
-    <div id="nameModal" class="modal">
-        <div class="modal-content">
-            <h3 class="modal-title"><i class="fas fa-user-plus"></i> Введите имя</h3>
-            <p class="modal-message">Как вас зовут?</p>
-            <input type="text" id="playerNameInput" placeholder="Ваше имя" style="width: 100%; margin-bottom: 20px;">
-            <div class="modal-buttons">
-                <button class="btn btn-primary" onclick="confirmName()">
-                    <i class="fas fa-check"></i> Подтвердить
+    <div id="nameModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-edit"></i> Вход в игру</h3>
+                <button class="modal-close" id="closeNameModal">
+                    <i class="fas fa-times"></i>
                 </button>
-                <button class="btn btn-secondary" onclick="cancelName()">
-                    <i class="fas fa-times"></i> Отмена
-                </button>
+            </div>
+            <div class="modal-body">
+                <p>Введите ваше имя для игры:</p>
+                <div class="input-group">
+                    <input type="text" id="nameInput" 
+                           placeholder="Ваше имя"
+                           maxlength="20">
+                    <div class="input-hint">Максимум 20 символов</div>
+                </div>
+                <div class="name-suggestions">
+                    <button class="suggestion-btn" data-name="Воин">Воин</button>
+                    <button class="suggestion-btn" data-name="Маг">Маг</button>
+                    <button class="suggestion-btn" data-name="Стрелок">Стрелок</button>
+                    <button class="suggestion-btn" data-name="Защитник">Защитник</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelNameBtn">Отмена</button>
+                <button class="btn btn-primary" id="confirmNameBtn">Войти</button>
             </div>
         </div>
     </div>
     
-    <div id="rulesModal" class="modal">
-        <div class="modal-content">
-            <h3 class="modal-title"><i class="fas fa-book"></i> Правила BattleScript</h3>
-            <div class="modal-message" style="text-align: left; max-height: 400px; overflow-y: auto;">
-                <h4>Основные правила:</h4>
-                <ul style="margin-left: 20px; margin-bottom: 15px;">
-                    <li>Игра начинается когда обе команды загрузят карты и подтвердят бой</li>
-                    <li>Ход длится 2 минуты или до пропуска хода</li>
-                    <li>Начальная мана: 3, увеличивается +1 каждый ход</li>
-                    <li>Взять карту можно за 1 ману + 0.5 за каждую карту в руке</li>
-                </ul>
-                
-                <h4>Механики существ:</h4>
-                <ul style="margin-left: 20px; margin-bottom: 15px;">
-                    <li><strong>Провокация</strong> - приоритетная цель для атаки</li>
-                    <li><strong>Прорыв</strong> - два удара, первый получает контратаку</li>
-                    <li><strong>Скрытность</strong> - неуязвим, пока не атакует</li>
-                    <li><strong>Площадной урон</strong> - атакует 3 цели (напротив и по бокам)</li>
-                    <li><strong>Целитель</strong> - лечит союзников каждый ход</li>
-                    <li><strong>Стрелок</strong> - атакует героя, контратакует летунов</li>
-                    <li><strong>Полет</strong> - атакует без контратаки, кроме стрелков</li>
-                    <li><strong>Яд</strong> - наносит -1 здоровье каждый ход (не на героев)</li>
-                    <li><strong>Дар</strong> - +1 мана при розыгрыше</li>
-                </ul>
-                
-                <h4>Авто-атака:</h4>
-                <p>Существа атакуют по алгоритму:<br>
-                1. Враги с Провокацией<br>
-                2. Герой напротив<br>
-                3. Случайный враг<br>
-                *Учитываются особенности способностей</p>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" onclick="hideRules()">
-                    <i class="fas fa-check"></i> Понятно
+    <div id="gameMenuModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-bars"></i> Меню игры</h3>
+                <button class="modal-close" id="closeMenuModal">
+                    <i class="fas fa-times"></i>
                 </button>
+            </div>
+            <div class="modal-body">
+                <div class="menu-options">
+                    <button class="menu-option" id="resumeGameBtn">
+                        <i class="fas fa-play"></i>
+                        <span>Продолжить игру</span>
+                    </button>
+                    <button class="menu-option" id="rulesBtn">
+                        <i class="fas fa-book"></i>
+                        <span>Правила</span>
+                    </button>
+                    <button class="menu-option" id="settingsBtn">
+                        <i class="fas fa-cog"></i>
+                        <span>Настройки</span>
+                    </button>
+                    <button class="menu-option" id="returnToMainBtn">
+                        <i class="fas fa-home"></i>
+                        <span>Выйти в меню</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
     
-    <script>
-        // Глобальные переменные
-        let ws = null;
-        let connected = false;
-        let currentTeam = null;
-        let clientId = null;
-        let playerName = null;
-        let selectedCard = null;
-        let turnTimer = null;
-        let timeLeft = 120;
-        
-        // Карты в создателе
-        let savedCards = [];
-        let abilityList = [
-            { id: 'taunt', name: 'Провокация', cost: 1 },
-            { id: 'breakthrough', name: 'Прорыв', cost: 1 },
-            { id: 'stealth', name: 'Скрытность', cost: 1 },
-            { id: 'area', name: 'Площадной урон', cost: 2 },
-            { id: 'healer', name: 'Целитель', cost: 2 },
-            { id: 'archer', name: 'Стрелок', cost: 1 },
-            { id: 'flying', name: 'Полет', cost: 1 },
-            { id: 'poison', name: 'Яд', cost: 2 },
-            { id: 'gift', name: 'Дар', cost: 3 },
-            { id: 'shield', name: 'Щит', cost: 1 }
-        ];
-        
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', function() {
-            connectToServer();
-            setupAbilitySelector();
-            setupCardSelection();
-            
-            // Проверка восстановления сессии
-            const savedTeam = localStorage.getItem('battlescript_team');
-            const savedName = localStorage.getItem('battlescript_name');
-            
-            if (savedTeam && savedName) {
-                showLoading('Восстановление сессии...');
-                setTimeout(() => {
-                    if (connected && ws) {
-                        restoreSession(savedTeam, savedName);
-                    } else {
-                        hideLoading();
-                    }
-                }, 2000);
-            }
-        });
-        
-        // Подключение к серверу
-        function connectToServer() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.hostname || 'localhost';
-            const port = 3000;
-            const wsUrl = `${protocol}//${host}:${port}`;
-            
-            console.log('Подключение к:', wsUrl);
-            showLoading('Подключение к серверу...');
-            
-            ws = new WebSocket(wsUrl);
-            
-            ws.onopen = () => {
-                console.log('WebSocket подключен');
-                connected = true;
-                updateConnectionStatus(true);
-                hideLoading();
-            };
-            
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    handleServerMessage(data);
-                } catch (e) {
-                    console.error('Ошибка парсинга:', e);
-                }
-            };
-            
-            ws.onclose = () => {
-                console.log('WebSocket отключен');
-                connected = false;
-                updateConnectionStatus(false);
-                
-                // Попытка переподключения
-                setTimeout(() => {
-                    if (!connected) {
-                        console.log('Попытка переподключения...');
-                        connectToServer();
-                    }
-                }, 3000);
-            };
-            
-            ws.onerror = (error) => {
-                console.error('WebSocket ошибка:', error);
-                hideLoading();
-            };
-        }
-        
-        // Восстановление сессии
-        function restoreSession(team, name) {
-            currentTeam = team;
-            playerName = name;
-            
-            sendToServer({
-                type: 'confirm_connection',
-                team: team,
-                playerName: name
-            });
-        }
-        
-        // Отправка сообщения на сервер
-        function sendToServer(data) {
-            if (connected && ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(data));
-            } else {
-                console.warn('Нет подключения');
-                showLoading('Нет подключения к серверу...');
-            }
-        }
-        
-        // Обработка сообщений сервера
-        function handleServerMessage(data) {
-            console.log('Получено:', data.type);
-            
-            switch (data.type) {
-                case 'init':
-                    clientId = data.clientId;
-                    updateGameState(data.gameState);
-                    addGameLog('Подключено к серверу', 'info');
-                    break;
-                    
-                case 'join_confirmed':
-                case 'connection_confirmed':
-                    clientId = data.clientId;
-                    currentTeam = data.team;
-                    playerName = data.playerName;
-                    
-                    // Сохраняем в localStorage
-                    localStorage.setItem('battlescript_team', currentTeam);
-                    localStorage.setItem('battlescript_name', playerName);
-                    localStorage.setItem('battlescript_clientId', clientId);
-                    
-                    // Показываем игровой экран
-                    showGameScreen();
-                    hideLoading();
-                    
-                    updateGameState(data.gameState);
-                    addGameLog(`Присоединились к команде ${currentTeam} как ${playerName}`, 'success');
-                    break;
-                    
-                case 'player_joined':
-                case 'player_left':
-                    updatePlayersInfo(data.teams);
-                    updateGameState(data.gameState);
-                    
-                    if (data.player) {
-                        const action = data.type === 'player_joined' ? 'присоединился' : 'покинул игру';
-                        addGameLog(`${data.player.name} ${action} (Команда ${data.player.team})`, 'info');
-                    }
-                    break;
-                    
-                case 'cards_loaded':
-                    updateGameState(data.gameState);
-                    addGameLog(`${data.player} загрузил ${data.cardsCount} карт для команды ${data.team}`, 'success');
-                    
-                    // Активируем кнопку подтверждения боя
-                    if (currentTeam === data.team) {
-                        document.getElementById('confirmBattleBtn').disabled = false;
-                    }
-                    break;
-                    
-                case 'battle_confirmed':
-                    updateGameState(data.gameState);
-                    addGameLog(`${data.player} подтвердил готовность к бою для команды ${data.team}`, 'warning');
-                    
-                    if (data.team === currentTeam) {
-                        document.getElementById('confirmBattleBtn').disabled = true;
-                        document.getElementById('confirmBattleBtn').innerHTML = '<i class="fas fa-check"></i> Бой подтвержден';
-                    }
-                    break;
-                    
-                case 'battle_status':
-                    updateBattleStatus(data);
-                    break;
-                    
-                case 'game_started':
-                    updateGameState(data.gameState);
-                    startTurnTimer();
-                    updateControls(true);
-                    addGameLog('Игра началась!', 'success');
-                    break;
-                    
-                case 'turn_changed':
-                    updateGameState(data.gameState);
-                    resetTurnTimer();
-                    updateControls(true);
-                    addGameLog(`Ход команды ${data.currentTurn}`, 'info');
-                    break;
-                    
-                case 'card_drawn':
-                    updateGameState(data.gameState);
-                    addGameLog(`${data.playerName} взял карту: ${data.card.name}`, 'success');
-                    break;
-                    
-                case 'creature_played':
-                case 'spell_played':
-                case 'artifact_played':
-                    updateGameState(data.gameState);
-                    addGameLog(`${data.playerName} разыграл ${data.card.name}`, 'success');
-                    break;
-                    
-                case 'attack':
-                case 'auto_attack':
-                    updateGameState(data.gameState);
-                    const attackType = data.type === 'auto_attack' ? 'Авто-атака' : 'Атака';
-                    const damageInfo = data.damage ? ` (урон: ${data.damage})` : '';
-                    addGameLog(`${data.playerName}: ${attackType} ${damageInfo}`, 'danger');
-                    break;
-                    
-                case 'mana_increased':
-                    updateGameState(data.gameState);
-                    addGameLog(`${data.playerName} увеличил ману до ${data.maxMana}`, 'info');
-                    break;
-                    
-                case 'chat_message':
-                    addChatMessage(data.playerName, data.message);
-                    break;
-                    
-                case 'game_ended':
-                    stopTurnTimer();
-                    updateControls(false);
-                    addGameLog(`Игра окончена! ${data.message}`, 'success');
-                    setTimeout(() => {
-                        alert(data.message);
-                        showMainScreen();
-                    }, 1000);
-                    break;
-                    
-                case 'error':
-                    console.error('Ошибка:', data.message);
-                    addGameLog(`Ошибка: ${data.message}`, 'danger');
-                    break;
-                    
-                case 'game_state_update':
-                    updateGameState(data.gameState);
-                    break;
-            }
-        }
-        
-        // UI функции
-        function showLoading(message) {
-            document.getElementById('loading').classList.add('active');
-            if (message) {
-                document.getElementById('loadingMessage').textContent = message;
-            }
-        }
-        
-        function hideLoading() {
-            document.getElementById('loading').classList.remove('active');
-        }
-        
-        function joinTeam(team) {
-            if (!connected) {
-                alert('Сначала подключитесь к серверу!');
-                return;
-            }
-            
-            currentTeam = team;
-            document.getElementById('nameModal').classList.add('active');
-        }
-        
-        function confirmName() {
-            const nameInput = document.getElementById('playerNameInput');
-            const name = nameInput.value.trim();
-            
-            if (!name) {
-                alert('Введите имя!');
-                return;
-            }
-            
-            playerName = name;
-            document.getElementById('nameModal').classList.remove('active');
-            
-            showLoading(`Присоединение к команде ${currentTeam}...`);
-            
-            sendToServer({
-                type: 'join_team',
-                team: currentTeam,
-                playerName: name
-            });
-            
-            nameInput.value = '';
-        }
-        
-        function cancelName() {
-            currentTeam = null;
-            document.getElementById('nameModal').classList.remove('active');
-        }
-        
-        function showMainScreen() {
-            document.getElementById('mainScreen').classList.add('active');
-            document.getElementById('gameScreen').classList.remove('active');
-            document.getElementById('creatorScreen').classList.remove('active');
-            
-            // Очищаем сессию
-            localStorage.removeItem('battlescript_team');
-            localStorage.removeItem('battlescript_name');
-            localStorage.removeItem('battlescript_clientId');
-            
-            // Сбрасываем состояние
-            currentTeam = null;
-            selectedCard = null;
-            stopTurnTimer();
-        }
-        
-        function showGameScreen() {
-            document.getElementById('mainScreen').classList.remove('active');
-            document.getElementById('gameScreen').classList.add('active');
-            document.getElementById('creatorScreen').classList.remove('active');
-            
-            document.getElementById('playerNameDisplay').textContent = playerName;
-            
-            if (currentTeam === 'spectator') {
-                document.getElementById('gameTitle').textContent = 'BattleScript (Наблюдатель)';
-            } else {
-                document.getElementById('gameTitle').textContent = `BattleScript (Команда ${currentTeam})`;
-            }
-        }
-        
-        function showCreator() {
-            document.getElementById('mainScreen').classList.remove('active');
-            document.getElementById('gameScreen').classList.remove('active');
-            document.getElementById('creatorScreen').classList.add('active');
-        }
-        
-        function spectateGame() {
-            currentTeam = 'spectator';
-            localStorage.setItem('battlescript_team', 'spectator');
-            showGameScreen();
-            addGameLog('Вы вошли как наблюдатель', 'info');
-        }
-        
-        function showRules() {
-            document.getElementById('rulesModal').classList.add('active');
-        }
-        
-        function hideRules() {
-            document.getElementById('rulesModal').classList.remove('active');
-        }
-        
-        // Обновление UI
-        function updateConnectionStatus(isConnected) {
-            const status = document.getElementById('connectionStatus');
-            const address = document.getElementById('serverAddress');
-            
-            if (isConnected) {
-                status.className = 'connection-status connected';
-                status.innerHTML = '<i class="fas fa-wifi"></i> Подключено';
-                address.textContent = `ws://${window.location.hostname || 'localhost'}:3000`;
-            } else {
-                status.className = 'connection-status disconnected';
-                status.innerHTML = '<i class="fas fa-plug"></i> Не подключено';
-                address.textContent = 'Подключение...';
-            }
-        }
-        
-        function updatePlayersInfo(teams) {
-            if (teams) {
-                document.getElementById('teamAPlayers').innerHTML = `<i class="fas fa-users"></i> Игроков: ${teams.teamA || 0}`;
-                document.getElementById('teamBPlayers').innerHTML = `<i class="fas fa-users"></i> Игроков: ${teams.teamB || 0}`;
-            }
-        }
-        
-        function updateGameState(state) {
-            if (!state) return;
-            
-            // Обновляем информацию о ходе
-            if (state.currentTurn) {
-                document.getElementById('currentTeam').textContent = state.currentTurn;
-                document.getElementById('turnNumber').textContent = state.turnNumber;
-                
-                const turnIndicator = document.getElementById('turnIndicator');
-                if (state.currentTurn === 'A') {
-                    turnIndicator.className = 'turn-indicator turn-a';
-                    turnIndicator.innerHTML = '<i class="fas fa-dragon"></i> Ход команды A';
-                } else {
-                    turnIndicator.className = 'turn-indicator turn-b';
-                    turnIndicator.innerHTML = '<i class="fas fa-shield-alt"></i> Ход команды B';
-                }
-                
-                // Обновляем состояние контролов
-                const isMyTurn = currentTeam === state.currentTurn;
-                const isSpectator = currentTeam === 'spectator';
-                const canPlay = state.gameStarted && isMyTurn && !isSpectator;
-                
-                updateControls(canPlay);
-            }
-            
-            // Обновляем состояние команд
-            if (state.teamA) {
-                document.getElementById('teamAMana').textContent = state.teamA.mana;
-                document.getElementById('teamAMaxMana').textContent = state.teamA.maxMana;
-                document.getElementById('teamAHealth').textContent = state.teamA.health;
-                
-                // Обновляем доску команды A
-                renderBoard('teamABoard', state.teamA.board);
-                
-                // Обновляем руку (только если мы команда A или наблюдатель)
-                if (currentTeam === 'A' || currentTeam === 'spectator') {
-                    renderHand('teamAHand', state.teamA.hand);
-                } else {
-                    // Для противника показываем только количество карт
-                    renderHiddenHand('teamAHand', state.teamA.hand.length);
-                }
-            }
-            
-            if (state.teamB) {
-                document.getElementById('teamBMana').textContent = state.teamB.mana;
-                document.getElementById('teamBMaxMana').textContent = state.teamB.maxMana;
-                document.getElementById('teamBHealth').textContent = state.teamB.health;
-                
-                // Обновляем доску команды B
-                renderBoard('teamBBoard', state.teamB.board);
-                
-                // Обновляем руку
-                if (currentTeam === 'B' || currentTeam === 'spectator') {
-                    renderHand('teamBHand', state.teamB.hand);
-                } else {
-                    renderHiddenHand('teamBHand', state.teamB.hand.length);
-                }
-            }
-            
-            // Обновляем статистику
-            if (currentTeam && state[currentTeam === 'A' ? 'teamA' : 'teamB']) {
-                const myState = state[currentTeam === 'A' ? 'teamA' : 'teamB'];
-                document.getElementById('deckSize').textContent = myState.deckSize || 0;
-                document.getElementById('handSize').textContent = myState.hand ? myState.hand.length : 0;
-                document.getElementById('boardSize').textContent = myState.board ? myState.board.length : 0;
-            }
-            
-            // Обновляем статус боя
-            updateBattleStatusFromState(state);
-        }
-        
-        function updateBattleStatus(data) {
-            const battleStatus = document.getElementById('battleStatus');
-            
-            if (data.teamA && data.teamB) {
-                const teamAReady = data.teamA.cardsLoaded && data.teamA.confirmed;
-                const teamBReady = data.teamB.cardsLoaded && data.teamB.confirmed;
-                
-                if (teamAReady && teamBReady) {
-                    battleStatus.innerHTML = `
-                        <div class="team-status status-ready">
-                            <i class="fas fa-check-circle"></i> Обе команды готовы к бою
-                        </div>
-                    `;
-                } else {
-                    battleStatus.innerHTML = `
-                        <div class="team-status status-not-ready">
-                            <i class="fas fa-clock"></i> Ожидание: 
-                            A: ${data.teamA.cardsLoaded ? '✓' : '✗'}, 
-                            B: ${data.teamB.cardsLoaded ? '✓' : '✗'}
-                        </div>
-                    `;
-                }
-            }
-        }
-        
-        function updateBattleStatusFromState(state) {
-            if (!state.teamA || !state.teamB) return;
-            
-            const battleStatus = document.getElementById('battleStatus');
-            const teamAReady = state.teamA.cardsLoaded && state.teamA.confirmedBattle;
-            const teamBReady = state.teamB.cardsLoaded && state.teamB.confirmedBattle;
-            
-            if (teamAReady && teamBReady) {
-                battleStatus.innerHTML = `
-                    <div class="team-status status-ready">
-                        <i class="fas fa-check-circle"></i> Обе команды готовы к бою
-                    </div>
-                `;
-            } else if (state.gameStarted) {
-                battleStatus.innerHTML = `
-                    <div class="team-status status-ready">
-                        <i class="fas fa-play-circle"></i> Бой идет
-                    </div>
-                `;
-            } else {
-                battleStatus.innerHTML = `
-                    <div class="team-status status-not-ready">
-                        <i class="fas fa-clock"></i> Ожидание: 
-                        A: ${state.teamA.cardsLoaded ? '✓' : '✗'}/${state.teamA.confirmedBattle ? '✓' : '✗'}, 
-                        B: ${state.teamB.cardsLoaded ? '✓' : '✗'}/${state.teamB.confirmedBattle ? '✓' : '✗'}
-                    </div>
-                `;
-            }
-        }
-        
-        function updateControls(canPlay) {
-            const isSpectator = currentTeam === 'spectator';
-            const buttons = [
-                'loadCardsBtn',
-                'confirmBattleBtn',
-                'drawCardBtn',
-                'increaseManaBtn',
-                'playCardBtn',
-                'autoAttackBtn',
-                'endTurnBtn'
-            ];
-            
-            buttons.forEach(btnId => {
-                const btn = document.getElementById(btnId);
-                if (btn) {
-                    btn.disabled = isSpectator || !canPlay;
-                }
-            });
-            
-            // Особые условия для некоторых кнопок
-            document.getElementById('loadCardsBtn').disabled = isSpectator || !currentTeam;
-            document.getElementById('confirmBattleBtn').disabled = isSpectator || !currentTeam;
-            
-            // Обновляем текст кнопки розыгрыша
-            const playBtn = document.getElementById('playCardBtn');
-            if (selectedCard) {
-                playBtn.disabled = false;
-                playBtn.innerHTML = `<i class="fas fa-play"></i> Разыграть "${selectedCard.name}"`;
-            } else {
-                playBtn.innerHTML = `<i class="fas fa-play"></i> Разыграть карту`;
-            }
-        }
-        
-        // Рендеринг карт
-        function renderBoard(containerId, board) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            
-            if (!board || board.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #64748b;">
-                        <i class="fas fa-ghost" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <p>Нет существ на поле</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = board.map(creature => `
-                <div class="card card-creature" data-id="${creature.id}">
-                    <div class="card-cost">${creature.cost}</div>
-                    <div class="card-name">${creature.name}</div>
-                    
-                    <div class="card-stats">
-                        <div class="stat">
-                            <div class="stat-value">${creature.attack}</div>
-                            <div class="stat-label">АТК</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${creature.health}/${creature.maxHealth || creature.health}</div>
-                            <div class="stat-label">HP</div>
-                        </div>
-                    </div>
-                    
-                    ${creature.abilities ? `
-                        <div class="card-abilities">
-                            ${creature.abilities.map(ability => `
-                                <span class="ability-badge">${ability}</span>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-                    
-                    ${creature.canAttack ? `
-                        <div style="margin-top: 10px; color: #22c55e; font-size: 0.8rem;">
-                            <i class="fas fa-bolt"></i> Может атаковать
-                        </div>
-                    ` : creature.hasAttacked ? `
-                        <div style="margin-top: 10px; color: #ef4444; font-size: 0.8rem;">
-                            <i class="fas fa-ban"></i> Атаковал
-                        </div>
-                    ` : ''}
-                    
-                    ${creature.hasStealth ? `
-                        <div style="margin-top: 10px; color: #8b5cf6; font-size: 0.8rem;">
-                            <i class="fas fa-eye-slash"></i> Скрытность
-                        </div>
-                    ` : ''}
-                </div>
-            `).join('');
-        }
-        
-        function renderHand(containerId, hand) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            
-            if (!hand || hand.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #64748b;">
-                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <p>Рука пуста</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = hand.map(card => {
-                const cardClass = `card card-${card.type}`;
-                const isSelected = selectedCard && selectedCard.id === card.id;
-                
-                return `
-                    <div class="${cardClass} ${isSelected ? 'selected' : ''}" 
-                         data-id="${card.id}"
-                         onclick="selectCard('${card.id}')">
-                        <div class="card-cost">${card.cost}</div>
-                        <div class="card-name">${card.name}</div>
-                        
-                        ${card.type === 'creature' ? `
-                            <div class="card-stats">
-                                <div class="stat">
-                                    <div class="stat-value">${card.attack}</div>
-                                    <div class="stat-label">АТК</div>
-                                </div>
-                                <div class="stat">
-                                    <div class="stat-value">${card.health}</div>
-                                    <div class="stat-label">HP</div>
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        ${card.abilities ? `
-                            <div class="card-abilities">
-                                ${card.abilities.map(ability => `
-                                    <span class="ability-badge">${ability}</span>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                        
-                        ${card.description ? `
-                            <div style="margin-top: 10px; font-size: 0.8rem; color: #94a3b8;">
-                                ${card.description.substring(0, 50)}...
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function renderHiddenHand(containerId, count) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            
-            container.innerHTML = Array(count).fill(0).map(() => `
-                <div class="card" style="opacity: 0.5;">
-                    <div class="card-name">Скрытая карта</div>
-                    <div style="margin-top: 30px; text-align: center;">
-                        <i class="fas fa-question" style="font-size: 3rem; color: #64748b;"></i>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // Управление картами
-        function selectCard(cardId) {
-            // Находим карту в руке текущей команды
-            const handContainer = document.getElementById(currentTeam === 'A' ? 'teamAHand' : 'teamBHand');
-            const cardElement = handContainer.querySelector(`[data-id="${cardId}"]`);
-            
-            if (!cardElement) return;
-            
-            // Снимаем выделение со всех карт
-            handContainer.querySelectorAll('.card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            // Выделяем выбранную карту
-            cardElement.classList.add('selected');
-            
-            // Сохраняем выбранную карту
-            selectedCard = { id: cardId };
-            
-            // Обновляем кнопку
-            updateControls(true);
-        }
-        
-        // Действия игрока
-        function loadExampleCards() {
-            if (!currentTeam || currentTeam === 'spectator') {
-                alert('Сначала присоединитесь к команде!');
-                return;
-            }
-            
-            const exampleCards = [
-                {
-                    id: 'warrior_' + Date.now(),
-                    name: 'Воин',
-                    type: 'creature',
-                    cost: 2,
-                    attack: 3,
-                    health: 4,
-                    abilities: ['Провокация'],
-                    description: 'Стойкий защитник, привлекающий атаки на себя.'
-                },
-                {
-                    id: 'mage_' + Date.now(),
-                    name: 'Маг',
-                    type: 'creature',
-                    cost: 4,
-                    attack: 2,
-                    health: 3,
-                    abilities: ['Площадной урон'],
-                    description: 'Могущественный заклинатель, поражающий несколько целей.'
-                },
-                {
-                    id: 'archer_' + Date.now(),
-                    name: 'Лучник',
-                    type: 'creature',
-                    cost: 3,
-                    attack: 3,
-                    health: 2,
-                    abilities: ['Стрелок', 'Скрытность'],
-                    description: 'Невидимый стрелок, атакующий издалека.'
-                },
-                {
-                    id: 'dragon_' + Date.now(),
-                    name: 'Дракон',
-                    type: 'creature',
-                    cost: 6,
-                    attack: 5,
-                    health: 6,
-                    abilities: ['Полет', 'Прорыв'],
-                    description: 'Могучий дракон, сокрушающий врагов.'
-                },
-                {
-                    id: 'healer_' + Date.now(),
-                    name: 'Жрец',
-                    type: 'creature',
-                    cost: 3,
-                    attack: 1,
-                    health: 4,
-                    abilities: ['Целитель'],
-                    description: 'Исцеляет союзников каждый ход.'
-                },
-                {
-                    id: 'fireball_' + Date.now(),
-                    name: 'Огненный шар',
-                    type: 'spell',
-                    cost: 3,
-                    attack: 4,
-                    health: 0,
-                    abilities: [],
-                    target: 'random',
-                    description: 'Наносит 4 урона случайному врагу.'
-                },
-                {
-                    id: 'heal_' + Date.now(),
-                    name: 'Исцеление',
-                    type: 'spell',
-                    cost: 2,
-                    attack: 3,
-                    health: 0,
-                    abilities: ['Целитель'],
-                    target: 'single',
-                    description: 'Восстанавливает 3 здоровья цели.'
-                },
-                {
-                    id: 'lightning_' + Date.now(),
-                    name: 'Цепная молния',
-                    type: 'spell',
-                    cost: 4,
-                    attack: 3,
-                    health: 0,
-                    abilities: [],
-                    target: 'all',
-                    description: 'Наносит 3 урона всем врагам.'
-                }
-            ];
-            
-            sendToServer({
-                type: 'load_cards',
-                team: currentTeam,
-                cards: exampleCards
-            });
-            
-            addGameLog(`Загружено ${exampleCards.length} примеров карт`, 'success');
-        }
-        
-        function confirmBattle() {
-            if (!currentTeam || currentTeam === 'spectator') return;
-            
-            sendToServer({
-                type: 'confirm_battle',
-                team: currentTeam
-            });
-        }
-        
-        function drawCard() {
-            if (!currentTeam || currentTeam === 'spectator') return;
-            
-            sendToServer({
-                type: 'draw_card'
-            });
-        }
-        
-        function increaseMana() {
-            if (!currentTeam || currentTeam === 'spectator') return;
-            
-            sendToServer({
-                type: 'increase_mana'
-            });
-        }
-        
-        function playCard() {
-            if (!currentTeam || currentTeam === 'spectator') return;
-            if (!selectedCard) {
-                alert('Выберите карту для розыгрыша!');
-                return;
-            }
-            
-            sendToServer({
-                type: 'play_card',
-                cardId: selectedCard.id,
-                target: null // Можно добавить выбор цели
-            });
-            
-            selectedCard = null;
-            updateControls(true);
-        }
-        
-        function autoAttack() {
-            if (!currentTeam || currentTeam === 'spectator') return;
-            
-            sendToServer({
-                type: 'auto_attack'
-            });
-        }
-        
-        function endTurn() {
-            if (!currentTeam || currentTeam === 'spectator') return;
-            
-            sendToServer({
-                type: 'end_turn'
-            });
-        }
-        
-        function sendChatMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            
-            if (message && connected) {
-                sendToServer({
-                    type: 'chat_message',
-                    message: message
-                });
-                
-                input.value = '';
-            }
-        }
-        
-        // Таймер хода
-        function startTurnTimer() {
-            stopTurnTimer();
-            timeLeft = 120;
-            updateTimerDisplay();
-            
-            turnTimer = setInterval(() => {
-                timeLeft--;
-                updateTimerDisplay();
-                
-                if (timeLeft <= 0) {
-                    stopTurnTimer();
-                    if (currentTeam && currentTeam !== 'spectator') {
-                        sendToServer({ type: 'end_turn' });
-                    }
-                }
-            }, 1000);
-        }
-        
-        function resetTurnTimer() {
-            stopTurnTimer();
-            startTurnTimer();
-        }
-        
-        function stopTurnTimer() {
-            if (turnTimer) {
-                clearInterval(turnTimer);
-                turnTimer = null;
-            }
-        }
-        
-        function updateTimerDisplay() {
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            const timerElement = document.getElementById('turnTimer');
-            
-            if (timerElement) {
-                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                
-                // Меняем цвет при малом времени
-                if (timeLeft <= 30) {
-                    timerElement.style.color = '#ef4444';
-                    if (timeLeft <= 10) {
-                        timerElement.classList.add('pulse');
-                    }
-                } else {
-                    timerElement.style.color = '#fbbf24';
-                    timerElement.classList.remove('pulse');
-                }
-            }
-        }
-        
-        // Журнал боя
-        function addGameLog(message, type = 'info') {
-            const logElement = document.getElementById('gameLog');
-            const entry = document.createElement('div');
-            
-            entry.className = `log-entry log-${type}`;
-            entry.innerHTML = `
-                <i class="fas fa-${getLogIcon(type)}"></i> 
-                [${new Date().toLocaleTimeString()}] ${message}
-            `;
-            
-            logElement.appendChild(entry);
-            logElement.scrollTop = logElement.scrollHeight;
-        }
-        
-        function addChatMessage(player, message) {
-            const logElement = document.getElementById('gameLog');
-            const entry = document.createElement('div');
-            
-            entry.className = 'log-entry log-info';
-            entry.innerHTML = `
-                <i class="fas fa-comment"></i> 
-                [${new Date().toLocaleTimeString()}] <strong>${player}:</strong> ${message}
-            `;
-            
-            logElement.appendChild(entry);
-            logElement.scrollTop = logElement.scrollHeight;
-        }
-        
-        function clearGameLog() {
-            document.getElementById('gameLog').innerHTML = `
-                <div class="log-entry log-info">
-                    <i class="fas fa-info-circle"></i> Журнал очищен
-                </div>
-            `;
-        }
-        
-        function exportGameLog() {
-            const logEntries = document.getElementById('gameLog').innerText;
-            const blob = new Blob([logEntries], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `battlescript_log_${new Date().toISOString().slice(0,10)}.txt`;
-            a.click();
-            
-            URL.revokeObjectURL(url);
-        }
-        
-        function getLogIcon(type) {
-            switch(type) {
-                case 'success': return 'check-circle';
-                case 'danger': return 'bolt';
-                case 'warning': return 'exclamation-triangle';
-                default: return 'info-circle';
-            }
-        }
-        
-        // Создатель карт
-        function setupAbilitySelector() {
-            const container = document.getElementById('abilitySelector');
-            if (!container) return;
-            
-            container.innerHTML = abilityList.map(ability => `
-                <div class="ability-option" data-id="${ability.id}" onclick="toggleAbility('${ability.id}')">
-                    ${ability.name}
-                    <div style="font-size: 0.7rem; color: #94a3b8;">(+${ability.cost})</div>
-                </div>
-            `).join('');
-        }
-        
-        let selectedAbilities = [];
-        
-        function toggleAbility(abilityId) {
-            const element = document.querySelector(`.ability-option[data-id="${abilityId}"]`);
-            const ability = abilityList.find(a => a.id === abilityId);
-            
-            if (!ability) return;
-            
-            const index = selectedAbilities.indexOf(ability.name);
-            if (index === -1) {
-                selectedAbilities.push(ability.name);
-                element.classList.add('selected');
-            } else {
-                selectedAbilities.splice(index, 1);
-                element.classList.remove('selected');
-            }
-            
-            updateCardPreview();
-        }
-        
-        function updateCardPreview() {
-            const type = document.getElementById('cardType').value;
-            const name = document.getElementById('cardName').value || 'Название карты';
-            const cost = parseInt(document.getElementById('cardCost').value) || 2;
-            const attack = parseInt(document.getElementById('cardAttack').value) || 0;
-            const health = parseInt(document.getElementById('cardHealth').value) || 0;
-            const description = document.getElementById('cardDescription').value || 'Описание карты...';
-            
-            const preview = document.getElementById('cardPreview');
-            if (!preview) return;
-            
-            let statsHTML = '';
-            if (type === 'creature') {
-                statsHTML = `
-                    <div class="card-stats" style="margin: 20px 0;">
-                        <div class="stat">
-                            <div class="stat-value">${attack}</div>
-                            <div class="stat-label">АТК</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${health}</div>
-                            <div class="stat-label">HP</div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            const abilitiesHTML = selectedAbilities.length > 0 ? `
-                <div style="margin: 15px 0;">
-                    ${selectedAbilities.map(ability => `
-                        <span class="ability-badge">${ability}</span>
-                    `).join('')}
-                </div>
-            ` : '';
-            
-            preview.innerHTML = `
-                <div class="card ${type === 'creature' ? 'card-creature' : type === 'spell' ? 'card-spell' : 'card-artifact'}" 
-                     style="width: 250px; height: 350px; margin: 0 auto;">
-                    <div class="card-cost">${cost}</div>
-                    <div class="card-name">${name}</div>
-                    ${statsHTML}
-                    ${abilitiesHTML}
-                    <div style="margin-top: 20px; font-size: 0.9rem; color: #94a3b8;">
-                        ${description}
-                    </div>
-                </div>
-            `;
-        }
-        
-        function saveCard() {
-            const type = document.getElementById('cardType').value;
-            const name = document.getElementById('cardName').value;
-            const cost = parseInt(document.getElementById('cardCost').value) || 2;
-            const attack = parseInt(document.getElementById('cardAttack').value) || 0;
-            const health = parseInt(document.getElementById('cardHealth').value) || 0;
-            const description = document.getElementById('cardDescription').value || '';
-            
-            if (!name) {
-                alert('Введите название карты!');
-                return;
-            }
-            
-            const card = {
-                id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                name: name,
-                type: type,
-                cost: cost,
-                attack: attack,
-                health: health,
-                abilities: [...selectedAbilities],
-                description: description,
-                target: type === 'spell' ? 'single' : undefined
-            };
-            
-            savedCards.push(card);
-            updateSavedCardsList();
-            
-            // Сбрасываем форму
-            clearCreator();
-            
-            alert(`Карта "${name}" сохранена! Всего сохранено: ${savedCards.length}`);
-        }
-        
-        function updateSavedCardsList() {
-            const list = document.getElementById('savedCardsList');
-            const count = document.getElementById('savedCount');
-            
-            if (!list || !count) return;
-            
-            count.textContent = savedCards.length;
-            
-            if (savedCards.length === 0) {
-                list.innerHTML = '<div style="color: #64748b; text-align: center; padding: 20px;">Нет сохраненных карт</div>';
-                return;
-            }
-            
-            list.innerHTML = savedCards.map((card, index) => `
-                <div style="background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid ${getCardColor(card.type)};">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>${card.name}</strong>
-                            <div style="font-size: 0.8rem; color: #94a3b8;">
-                                ${card.type === 'creature' ? `АТК: ${card.attack} HP: ${card.health}` : ''}
-                                Стоимость: ${card.cost}
-                            </div>
-                        </div>
-                        <div>
-                            <button class="btn btn-secondary" onclick="loadCardToGame(${index})" style="padding: 5px 10px; font-size: 0.8rem;">
-                                <i class="fas fa-upload"></i>
-                            </button>
-                            <button class="btn btn-secondary" onclick="deleteCard(${index})" style="padding: 5px 10px; font-size: 0.8rem;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function getCardColor(type) {
-            switch(type) {
-                case 'creature': return '#22c55e';
-                case 'spell': return '#8b5cf6';
-                case 'artifact': return '#f59e0b';
-                default: return '#64748b';
-            }
-        }
-        
-        function clearCreator() {
-            document.getElementById('cardName').value = '';
-            document.getElementById('cardCost').value = '2';
-            document.getElementById('cardAttack').value = '2';
-            document.getElementById('cardHealth').value = '3';
-            document.getElementById('cardDescription').value = '';
-            
-            selectedAbilities = [];
-            document.querySelectorAll('.ability-option.selected').forEach(el => {
-                el.classList.remove('selected');
-            });
-            
-            updateCardPreview();
-        }
-        
-        function loadCardToGame(index) {
-            if (!currentTeam || currentTeam === 'spectator') {
-                alert('Сначала присоединитесь к команде!');
-                return;
-            }
-            
-            const card = savedCards[index];
-            if (!card) return;
-            
-            sendToServer({
-                type: 'load_cards',
-                team: currentTeam,
-                cards: [card]
-            });
-            
-            addGameLog(`Карта "${card.name}" загружена в игру`, 'success');
-        }
-        
-        function deleteCard(index) {
-            if (confirm('Удалить эту карту?')) {
-                savedCards.splice(index, 1);
-                updateSavedCardsList();
-            }
-        }
-        
-        function setupCardSelection() {
-            // Инициализация выбора карты
-        }
-        
-        // Назначаем обработчики кнопок
-        document.getElementById('loadCardsBtn').addEventListener('click', loadExampleCards);
-        document.getElementById('confirmBattleBtn').addEventListener('click', confirmBattle);
-        document.getElementById('drawCardBtn').addEventListener('click', drawCard);
-        document.getElementById('increaseManaBtn').addEventListener('click', increaseMana);
-        document.getElementById('playCardBtn').addEventListener('click', playCard);
-        document.getElementById('autoAttackBtn').addEventListener('click', autoAttack);
-        document.getElementById('endTurnBtn').addEventListener('click', endTurn);
-        
-        document.getElementById('chatInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendChatMessage();
-            }
-        });
-        
-        // Инициализация
-        updateCardPreview();
-    </script>
+    <!-- Аудио элементы -->
+    <audio id="soundClick" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3" type="audio/mpeg">
+    </audio>
+    
+    <audio id="soundCardPlay" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-magic-spell-479.mp3" type="audio/mpeg">
+    </audio>
+    
+    <audio id="soundAttack" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-sword-slash-2768.mp3" type="audio/mpeg">
+    </audio>
+    
+    <!-- Подключаем конфигурацию и скрипты -->
+    <script src="config.js"></script>
+    <script src="client.js"></script>
 </body>
 </html>
