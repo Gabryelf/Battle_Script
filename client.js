@@ -4,11 +4,15 @@ class BattleScriptClient {
         this.ws = null;
         this.clientId = null;
         this.playerName = null;
+        this.playerAvatar = 'warrior';
         this.gameState = null;
         this.isPlayer = false;
         this.isSpectator = false;
         this.currentGameId = null;
         this.selectedCard = null;
+        this.selectedArtifact = null;
+        this.selectedAttacker = null;
+        this.targetMode = null; // 'attack', 'spell', 'artifact'
         this.turnTimer = null;
         this.timeLeft = 0;
         this.soundEnabled = GameConfig.sounds.enabled;
@@ -24,8 +28,8 @@ class BattleScriptClient {
         this.createParticles();
         this.connectToServer();
         this.updateTopCards();
+        this.setupAvatarSelection();
         
-        // Обновляем размеры при загрузке
         setTimeout(() => this.handleResize(), 100);
     }
     
@@ -58,11 +62,11 @@ class BattleScriptClient {
         document.getElementById('soundBtn').addEventListener('click', () => this.toggleSound());
         
         // Управление игрой
-        document.getElementById('attackBtn').addEventListener('click', () => this.attack());
+        document.getElementById('attackBtn').addEventListener('click', () => this.initiateAttack());
         document.getElementById('playCardBtn').addEventListener('click', () => this.playCard());
         document.getElementById('autoAttackBtn').addEventListener('click', () => this.autoAttack());
         document.getElementById('endTurnBtn').addEventListener('click', () => this.endTurn());
-        document.getElementById('drawCardBtn').addEventListener('click', () => this.drawCard());
+        document.getElementById('useArtifactBtn').addEventListener('click', () => this.initiateArtifactUse());
         
         // Чат
         document.getElementById('sendChatBtn').addEventListener('click', () => this.sendChatMessage());
@@ -86,6 +90,47 @@ class BattleScriptClient {
         document.addEventListener('gesturestart', (e) => e.preventDefault());
     }
     
+    setupAvatarSelection() {
+        const avatarsGrid = document.getElementById('avatarsGrid');
+        if (!avatarsGrid) return;
+        
+        avatarsGrid.innerHTML = GameConfig.avatars.map(avatar => `
+            <div class="avatar-option ${avatar.id === this.playerAvatar ? 'selected' : ''}" 
+                 data-avatar="${avatar.id}" 
+                 style="border-color: ${avatar.color}">
+                <div class="avatar-icon" style="color: ${avatar.color}">
+                    <i class="fas ${avatar.icon}"></i>
+                </div>
+                <div class="avatar-name">${avatar.name}</div>
+                <div class="avatar-description">${avatar.description}</div>
+                <div class="avatar-stats">
+                    <span class="stat-item"><i class="fas fa-heart"></i> ${avatar.bonusHealth > 0 ? '+' : ''}${avatar.bonusHealth}</span>
+                    <span class="stat-item"><i class="fas fa-gem"></i> ${avatar.bonusMana > 0 ? '+' : ''}${avatar.bonusMana}</span>
+                </div>
+            </div>
+        `).join('');
+        
+        // Обработчики выбора аватара
+        avatarsGrid.querySelectorAll('.avatar-option').forEach(option => {
+            option.addEventListener('click', () => {
+                avatarsGrid.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                this.playerAvatar = option.dataset.avatar;
+                
+                // Обновляем отображение аватара
+                const avatarData = GameConfig.getAvatarById(this.playerAvatar);
+                if (avatarData) {
+                    const avatarDisplay = document.getElementById('avatarDisplay');
+                    avatarDisplay.innerHTML = `
+                        <div class="avatar-icon" style="color: ${avatarData.color}">
+                            <i class="fas ${avatarData.icon}"></i>
+                        </div>
+                    `;
+                }
+            });
+        });
+    }
+    
     connectToServer() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname || 'localhost';
@@ -93,8 +138,6 @@ class BattleScriptClient {
         const wsUrl = `${protocol}//${host}:${port}`;
         
         this.showLoading('Подключение к серверу...');
-        
-        console.log('🔄 Подключение к серверу:', wsUrl);
         
         this.ws = new WebSocket(wsUrl);
         
@@ -109,7 +152,6 @@ class BattleScriptClient {
         this.ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log('📨 Получено от сервера:', data.type);
                 this.handleServerMessage(data);
             } catch (e) {
                 console.error('❌ Ошибка парсинга сообщения:', e, event.data);
@@ -206,12 +248,12 @@ class BattleScriptClient {
                 this.handleAutoAttackResult(data);
                 break;
                 
-            case 'card_added':
-                this.handleCardAdded(data);
+            case 'artifact_used':
+                this.handleArtifactUsed(data);
                 break;
                 
-            case 'card_drawn':
-                this.handleCardDrawn(data);
+            case 'quest_completed':
+                this.handleQuestCompleted(data);
                 break;
                 
             case 'chat_message':
@@ -237,10 +279,6 @@ class BattleScriptClient {
             case 'debug_response':
                 this.handleDebugResponse(data);
                 break;
-                
-            case 'pong':
-                // Просто отвечаем на пинг
-                break;
         }
     }
     
@@ -252,10 +290,11 @@ class BattleScriptClient {
     
     handleNameSet(data) {
         this.playerName = data.name;
+        this.playerAvatar = data.avatar || 'warrior';
         this.updatePlayerDisplay();
         this.hideNameModal();
         
-        this.addGameLog(`Вы вошли как ${this.playerName}`, 'info');
+        this.addGameLog(`Вы вошли как ${this.playerName} (${GameConfig.getAvatarById(this.playerAvatar)?.name})`, 'info');
     }
     
     handleServerInfo(data) {
@@ -365,15 +404,14 @@ class BattleScriptClient {
         }
     }
     
-    handleCardAdded(data) {
-        this.addGameLog(`Добавлена карта: ${data.card.name}`, 'success');
-        this.playSound('draw');
+    handleArtifactUsed(data) {
+        this.addGameLog(`${data.playerName} использует ${data.artifact} на ${data.target}`, 'info');
+        this.playSound('cardPlay');
     }
     
-    handleCardDrawn(data) {
-        if (data.playerName !== this.playerName) {
-            this.addGameLog(`${data.playerName} берет карту`, 'info');
-        }
+    handleQuestCompleted(data) {
+        this.addGameLog(`Получен артефакт: ${data.artifact.name}`, 'success');
+        this.playSound('cardPlay');
     }
     
     handleChatMessage(data) {
@@ -479,6 +517,18 @@ class BattleScriptClient {
     
     updatePlayerDisplay() {
         document.getElementById('playerNameDisplay').textContent = this.playerName;
+        
+        const avatarData = GameConfig.getAvatarById(this.playerAvatar);
+        const avatarDisplay = document.getElementById('avatarDisplay');
+        if (avatarData) {
+            avatarDisplay.innerHTML = `
+                <div class="avatar-icon" style="color: ${avatarData.color}">
+                    <i class="fas ${avatarData.icon}"></i>
+                </div>
+                <div class="avatar-name">${avatarData.name}</div>
+            `;
+        }
+        
         const playerStatus = document.getElementById('playerStatus');
         playerStatus.className = 'status-badge connected';
         playerStatus.innerHTML = '<i class="fas fa-sign-in-alt"></i> В игре';
@@ -487,6 +537,7 @@ class BattleScriptClient {
     showNameModal() {
         document.getElementById('nameModal').classList.add('active');
         document.getElementById('nameInput').focus();
+        this.setupAvatarSelection();
     }
     
     hideNameModal() {
@@ -501,7 +552,8 @@ class BattleScriptClient {
         if (name) {
             this.sendToServer({
                 type: 'set_name',
-                name: name
+                name: name,
+                avatar: this.playerAvatar
             });
         } else {
             alert('Введите имя!');
@@ -530,7 +582,6 @@ class BattleScriptClient {
     }
     
     showSpectateModal() {
-        // В будущем можно добавить список активных игр
         alert('В текущей версии наблюдатели подключаются автоматически к новым играм');
     }
     
@@ -540,7 +591,6 @@ class BattleScriptClient {
         document.getElementById('mainScreen').classList.remove('active-screen');
         document.getElementById('gameScreen').classList.add('active-screen');
         
-        // Обновляем размеры при переходе
         setTimeout(() => this.handleResize(), 100);
     }
     
@@ -550,7 +600,6 @@ class BattleScriptClient {
         document.getElementById('gameScreen').classList.remove('active-screen');
         document.getElementById('mainScreen').classList.add('active-screen');
         
-        // Выход из игры
         if (this.currentGameId && this.isPlayer) {
             this.sendToServer({
                 type: 'leave_queue'
@@ -582,17 +631,19 @@ class BattleScriptClient {
         this.isSpectator = false;
         this.currentGameId = null;
         this.selectedCard = null;
+        this.selectedArtifact = null;
+        this.selectedAttacker = null;
+        this.targetMode = null;
         this.stopTurnTimer();
         
-        // Сбрасываем UI
         document.getElementById('playerHand').innerHTML = '';
-        document.getElementById('playerBoard').innerHTML = '';
+        document.getElementById('playerBoardGrid').innerHTML = '';
         document.getElementById('opponentHand').innerHTML = '';
-        document.getElementById('opponentBoard').innerHTML = '';
+        document.getElementById('opponentBoardGrid').innerHTML = '';
         document.getElementById('gameLog').innerHTML = '';
         document.getElementById('chatMessages').innerHTML = '';
+        document.getElementById('artifactContainer').innerHTML = '';
         
-        // Сбрасываем статус игрока
         const playerStatus = document.getElementById('playerStatus');
         playerStatus.className = 'status-badge disconnected';
         playerStatus.innerHTML = '<i class="fas fa-sign-out-alt"></i> Не в игре';
@@ -601,8 +652,8 @@ class BattleScriptClient {
     updatePlayerView(isPlayer1) {
         if (!this.gameState) return;
         
-        const player = isPlayer1 ? this.gameState.player1 : this.gameState.player2;
-        const opponent = isPlayer1 ? this.gameState.player2 : this.gameState.player1;
+        const player = this.gameState.player;
+        const opponent = this.gameState.opponent;
         
         // Обновляем информацию о игроке
         document.getElementById('gamePlayerName').textContent = this.playerName;
@@ -612,20 +663,53 @@ class BattleScriptClient {
         document.getElementById('playerHealth').textContent = player.health;
         document.getElementById('playerHandCount').textContent = player.hand?.length || 0;
         
+        // Обновляем аватар игрока
+        const playerAvatar = document.getElementById('playerAvatar');
+        const playerAvatarData = GameConfig.getAvatarById(player.avatar);
+        if (playerAvatarData) {
+            playerAvatar.innerHTML = `<i class="fas ${playerAvatarData.icon}" style="color: ${playerAvatarData.color}"></i>`;
+            playerAvatar.style.borderColor = playerAvatarData.color;
+        }
+        
         // Обновляем информацию о противнике
         document.getElementById('opponentName').textContent = opponent.name;
         document.getElementById('opponentMana').textContent = opponent.mana;
         document.getElementById('opponentMaxMana').textContent = opponent.maxMana;
         document.getElementById('opponentHealth').textContent = opponent.health;
-        document.getElementById('opponentHandCount').textContent = opponent.hand?.length || 0;
+        document.getElementById('opponentHandCount').textContent = opponent.handSize || 0;
+        
+        // Обновляем аватар противника
+        const opponentAvatar = document.getElementById('opponentAvatar');
+        const opponentAvatarData = GameConfig.getAvatarById(opponent.avatar);
+        if (opponentAvatarData) {
+            opponentAvatar.innerHTML = `<i class="fas ${opponentAvatarData.icon}" style="color: ${opponentAvatarData.color}"></i>`;
+            opponentAvatar.style.borderColor = opponentAvatarData.color;
+        }
+        
+        // Обновляем квест
+        if (player.quest) {
+            const questElement = document.getElementById('currentQuest');
+            const progress = Math.min(player.quest.progress, player.quest.requirement);
+            const percent = (progress / player.quest.requirement) * 100;
+            questElement.innerHTML = `
+                <i class="fas fa-scroll"></i>
+                <span>Квест: ${player.quest.description} (${progress}/${player.quest.requirement})</span>
+                <div class="quest-progress">
+                    <div class="progress-bar" style="width: ${percent}%"></div>
+                </div>
+            `;
+        }
         
         // Рендерим руку и поле игрока
-        this.renderHand('playerHand', player.hand || [], true);
-        this.renderBoard('playerBoard', player.board || [], true);
+        this.renderHand('playerHand', player.hand || []);
+        this.renderBoard('playerBoardGrid', player.board || [], true);
         
         // Рука противника скрыта
-        this.renderHiddenHand('opponentHand', opponent.hand?.length || 0);
-        this.renderBoard('opponentBoard', opponent.board || [], false);
+        this.renderHiddenHand('opponentHand', opponent.handSize || 0);
+        this.renderBoard('opponentBoardGrid', opponent.board || [], false);
+        
+        // Рендерим артефакты
+        this.renderArtifacts('artifactContainer', player.artifacts || []);
         
         // Обновляем статус хода
         const isMyTurn = this.gameState.currentTurn === player.id;
@@ -638,11 +722,16 @@ class BattleScriptClient {
         const player1 = this.gameState.player1;
         const player2 = this.gameState.player2;
         
-        // Обновляем информацию
         document.getElementById('gamePlayerName').textContent = 'Наблюдатель';
         document.getElementById('gameCurrentPlayerName').textContent = 'Наблюдатель';
         
         // Игрок 1 (снизу)
+        const avatar1 = GameConfig.getAvatarById(player1.avatar);
+        if (avatar1) {
+            document.getElementById('playerAvatar').innerHTML = `<i class="fas ${avatar1.icon}" style="color: ${avatar1.color}"></i>`;
+            document.getElementById('playerAvatar').style.borderColor = avatar1.color;
+        }
+        
         document.getElementById('playerName').textContent = player1.name;
         document.getElementById('playerMana').textContent = player1.mana;
         document.getElementById('playerMaxMana').textContent = player1.maxMana;
@@ -650,27 +739,35 @@ class BattleScriptClient {
         document.getElementById('playerHandCount').textContent = player1.handSize || 0;
         
         // Игрок 2 (сверху)
+        const avatar2 = GameConfig.getAvatarById(player2.avatar);
+        if (avatar2) {
+            document.getElementById('opponentAvatar').innerHTML = `<i class="fas ${avatar2.icon}" style="color: ${avatar2.color}"></i>`;
+            document.getElementById('opponentAvatar').style.borderColor = avatar2.color;
+        }
+        
         document.getElementById('opponentName').textContent = player2.name;
         document.getElementById('opponentMana').textContent = player2.mana;
         document.getElementById('opponentMaxMana').textContent = player2.maxMana;
         document.getElementById('opponentHealth').textContent = player2.health;
         document.getElementById('opponentHandCount').textContent = player2.handSize || 0;
         
-        // Рендерим обе стороны (руки скрыты)
+        // Рендерим обе стороны
         this.renderHiddenHand('playerHand', player1.handSize || 0);
-        this.renderBoard('playerBoard', player1.board || [], true);
+        this.renderBoard('playerBoardGrid', player1.board || [], false);
         
         this.renderHiddenHand('opponentHand', player2.handSize || 0);
-        this.renderBoard('opponentBoard', player2.board || [], false);
+        this.renderBoard('opponentBoardGrid', player2.board || [], false);
+        
+        document.getElementById('artifactContainer').innerHTML = '<div class="empty-artifacts"><i class="fas fa-treasure-chest"></i><span>Артефакты скрыты</span></div>';
     }
     
     updateGameBoard() {
         if (!this.gameState) return;
         
-        // Обновляем информацию о ходе
         const turnIndicator = document.getElementById('turnIndicator');
-        const currentPlayer = this.gameState.currentTurn === this.gameState.player1.id ? 
-                             this.gameState.player1 : this.gameState.player2;
+        const currentPlayerId = this.gameState.currentTurn;
+        const currentPlayer = currentPlayerId === this.gameState.player?.id ? 
+                             this.gameState.player : this.gameState.opponent;
         
         if (this.gameState.status === 'active') {
             turnIndicator.className = 'turn-indicator active';
@@ -679,12 +776,14 @@ class BattleScriptClient {
             turnIndicator.className = 'turn-indicator waiting';
             turnIndicator.innerHTML = `<i class="fas fa-hourglass-half"></i><span>Ожидание...</span>`;
         }
+        
+        // Обновляем счетчик артефактов
+        document.getElementById('artifactDeckCount').textContent = this.gameState.artifactDeckSize || 0;
     }
     
     updateGameInfo() {
         if (!this.gameState) return;
         
-        // Обновляем номер хода
         document.getElementById('gameTimer').querySelector('span').textContent = 
             this.formatTime(this.timeLeft);
     }
@@ -712,7 +811,7 @@ class BattleScriptClient {
             'playCardBtn',
             'autoAttackBtn',
             'endTurnBtn',
-            'drawCardBtn'
+            'useArtifactBtn'
         ];
         
         const isEnabled = this.isPlayer && isMyTurn && this.gameState?.status === 'active';
@@ -725,7 +824,7 @@ class BattleScriptClient {
             }
         });
         
-        // Обновляем текст кнопки розыгрыша карты
+        // Обновляем текст кнопок
         const playBtn = document.getElementById('playCardBtn');
         if (this.selectedCard) {
             const shortName = this.selectedCard.name.length > 10 
@@ -735,9 +834,19 @@ class BattleScriptClient {
         } else {
             playBtn.innerHTML = `<i class="fas fa-play"></i><span>Играть карту</span>`;
         }
+        
+        const artifactBtn = document.getElementById('useArtifactBtn');
+        if (this.selectedArtifact) {
+            const shortName = this.selectedArtifact.name.length > 8 
+                ? this.selectedArtifact.name.substring(0, 8) + '...' 
+                : this.selectedArtifact.name;
+            artifactBtn.innerHTML = `<i class="fas fa-magic"></i><span>Исп. ${shortName}</span>`;
+        } else {
+            artifactBtn.innerHTML = `<i class="fas fa-magic"></i><span>Исп. артефакт</span>`;
+        }
     }
     
-    renderHand(containerId, hand, isOwnHand) {
+    renderHand(containerId, hand) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
@@ -751,14 +860,21 @@ class BattleScriptClient {
             return;
         }
         
-        hand.forEach((card, index) => {
-            const cardElement = this.createCardElement(card, isOwnHand ? 'hand' : 'opponent-hand');
+        hand.forEach((card) => {
+            const cardElement = this.createCardElement(card, 'hand');
             container.appendChild(cardElement);
             
-            if (isOwnHand) {
-                // Добавляем обработчик выбора карты
-                cardElement.addEventListener('click', () => this.selectCard(card));
-            }
+            // Добавляем обработчик выбора карты
+            cardElement.addEventListener('click', () => {
+                if (this.targetMode) {
+                    this.cancelTargetMode();
+                } else {
+                    this.selectCard(card);
+                }
+            });
+            
+            // Добавляем эффект блика
+            this.addCardGlowEffect(cardElement);
         });
     }
     
@@ -766,24 +882,77 @@ class BattleScriptClient {
         const container = document.getElementById(containerId);
         if (!container) return;
         
-        container.innerHTML = '';
-        
-        if (!board || board.length === 0) {
-            const emptyMsg = document.createElement('div');
-            emptyMsg.className = 'empty-board';
-            emptyMsg.innerHTML = '<i class="fas fa-chess-board"></i><span>Поле пусто</span>';
-            container.appendChild(emptyMsg);
-            return;
+        // Создаем ячейки, если их нет
+        if (container.children.length === 0) {
+            for (let i = 0; i < 5; i++) {
+                const cell = document.createElement('div');
+                cell.className = `board-cell cell-${i + 1} ${i === 0 || i === 4 ? 'special-cell' : ''}`;
+                cell.dataset.cell = i;
+                cell.title = i === 0 ? 'Ячейка 1: Немедленная атака' : 
+                           i === 4 ? 'Ячейка 5: Скрытность' : `Ячейка ${i + 1}`;
+                container.appendChild(cell);
+            }
         }
         
+        // Очищаем ячейки
+        container.querySelectorAll('.board-cell').forEach(cell => {
+            cell.innerHTML = '';
+            cell.classList.remove('occupied', 'can-attack', 'attack-target');
+        });
+        
+        if (!board || board.length === 0) return;
+        
         board.forEach((creature, index) => {
-            const cardElement = this.createCardElement(creature, 'board');
-            container.appendChild(cardElement);
-            
-            if (isOwnBoard && creature.canAttack && !creature.hasAttacked) {
-                // Добавляем возможность атаки
-                cardElement.classList.add('can-attack');
-                cardElement.addEventListener('click', () => this.selectAttacker(creature));
+            if (creature) {
+                const cell = container.querySelector(`[data-cell="${index}"]`);
+                if (cell) {
+                    cell.classList.add('occupied');
+                    
+                    const cardElement = this.createCardElement(creature, 'board');
+                    
+                    // Добавляем иконки статусов
+                    const statusIcons = document.createElement('div');
+                    statusIcons.className = 'creature-status';
+                    
+                    if (creature.canAttack && !creature.hasAttacked) {
+                        const attackIcon = document.createElement('div');
+                        attackIcon.className = 'status-icon can-attack-icon';
+                        attackIcon.innerHTML = '<i class="fas fa-bolt"></i>';
+                        attackIcon.title = 'Может атаковать';
+                        statusIcons.appendChild(attackIcon);
+                        
+                        // Добавляем обработчик для атаки
+                        cardElement.addEventListener('click', () => {
+                            if (this.targetMode === 'attack') {
+                                this.cancelTargetMode();
+                            } else if (isOwnBoard && !this.targetMode) {
+                                this.selectAttacker(creature);
+                            }
+                        });
+                    }
+                    
+                    if (creature.stealth) {
+                        const stealthIcon = document.createElement('div');
+                        stealthIcon.className = 'status-icon stealth-icon';
+                        stealthIcon.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                        stealthIcon.title = 'Скрытность (нельзя атаковать)';
+                        statusIcons.appendChild(stealthIcon);
+                    }
+                    
+                    if (creature.frozen) {
+                        const frozenIcon = document.createElement('div');
+                        frozenIcon.className = 'status-icon frozen-icon';
+                        frozenIcon.innerHTML = '<i class="fas fa-snowflake"></i>';
+                        frozenIcon.title = 'Заморожен (не может атаковать)';
+                        statusIcons.appendChild(frozenIcon);
+                    }
+                    
+                    cardElement.appendChild(statusIcons);
+                    cell.appendChild(cardElement);
+                    
+                    // Добавляем эффект блика
+                    this.addCardGlowEffect(cardElement);
+                }
             }
         });
     }
@@ -814,6 +983,52 @@ class BattleScriptClient {
         }
     }
     
+    renderArtifacts(containerId, artifacts) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        if (!artifacts || artifacts.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.className = 'empty-artifacts';
+            emptyMsg.innerHTML = '<i class="fas fa-treasure-chest"></i><span>Артефактов нет</span>';
+            container.appendChild(emptyMsg);
+            return;
+        }
+        
+        artifacts.forEach((artifact) => {
+            const artifactElement = document.createElement('div');
+            artifactElement.className = 'artifact-item';
+            artifactElement.dataset.id = artifact.instanceId;
+            
+            const rarityColor = GameConfig.getRarityColor(artifact.rarity);
+            
+            artifactElement.innerHTML = `
+                <div class="artifact-icon" style="color: ${rarityColor}">
+                    <i class="fas ${artifact.image || 'fa-gem'}"></i>
+                </div>
+                <div class="artifact-info">
+                    <div class="artifact-name">${artifact.name}</div>
+                    <div class="artifact-description">${artifact.description}</div>
+                    <div class="artifact-requirements">
+                        ${artifact.requirements?.map(req => `<span class="req-tag">${req}</span>`).join('') || ''}
+                    </div>
+                </div>
+            `;
+            
+            artifactElement.addEventListener('click', () => {
+                if (this.targetMode === 'artifact') {
+                    this.cancelTargetMode();
+                } else {
+                    this.selectArtifact(artifact);
+                }
+            });
+            
+            container.appendChild(artifactElement);
+        });
+    }
+    
     createCardElement(cardData, location) {
         const card = document.createElement('div');
         card.className = `card ${location} rarity-${cardData.rarity}`;
@@ -827,7 +1042,10 @@ class BattleScriptClient {
                 <div class="card-abilities">
                     ${cardData.abilities.map(abilityId => {
                         const abilityName = GameConfig.getAbilityName(abilityId);
-                        return `<span class="ability-badge">${abilityName}</span>`;
+                        const abilityIcon = GameConfig.getAbilityIcon(abilityId);
+                        return `<span class="ability-badge" title="${GameConfig.getAbilityDescription(abilityId)}">
+                            <i class="fas ${abilityIcon}"></i> ${abilityName}
+                        </span>`;
                     }).join('')}
                 </div>
             `;
@@ -837,16 +1055,27 @@ class BattleScriptClient {
         if (cardData.type === 'creature') {
             const health = cardData.currentHealth || cardData.health;
             const maxHealth = cardData.maxHealth || cardData.health;
+            const attack = cardData.attack + (cardData.bonuses?.attack || 0);
+            const totalHealth = health + (cardData.bonuses?.health || 0);
             
             statsHTML = `
                 <div class="card-stats">
-                    <div class="stat attack">
+                    <div class="stat attack" title="Сила атаки">
                         <i class="fas fa-bolt"></i>
-                        <span>${cardData.attack}</span>
+                        <span class="stat-value">${attack}</span>
                     </div>
-                    <div class="stat health">
+                    <div class="stat health" title="Здоровье">
                         <i class="fas fa-heart"></i>
-                        <span>${health}/${maxHealth}</span>
+                        <span class="stat-value">${totalHealth}</span>
+                    </div>
+                </div>
+            `;
+        } else if (cardData.type === 'spell') {
+            statsHTML = `
+                <div class="card-stats">
+                    <div class="stat effect" title="Сила эффекта">
+                        <i class="fas fa-magic"></i>
+                        <span class="stat-value">${cardData.value || 0}</span>
                     </div>
                 </div>
             `;
@@ -872,21 +1101,31 @@ class BattleScriptClient {
         return card;
     }
     
+    addCardGlowEffect(cardElement) {
+        // Добавляем анимацию блика
+        const shine = document.createElement('div');
+        shine.className = 'card-shine';
+        cardElement.appendChild(shine);
+        
+        // Запускаем анимацию
+        setTimeout(() => {
+            shine.style.animation = 'shine 4s linear infinite';
+        }, 100);
+    }
+    
     selectCard(card) {
         if (!this.isPlayer || !this.gameState) return;
         
-        const player = this.getPlayer();
+        const player = this.gameState.player;
         if (this.gameState.currentTurn !== player.id) {
             this.addGameLog('Сейчас не ваш ход', 'error');
             return;
         }
         
-        // Снимаем выделение со всех карт
-        document.querySelectorAll('.card.selected').forEach(c => {
-            c.classList.remove('selected');
-        });
+        // Снимаем выделение
+        this.clearSelections();
         
-        // Выделяем выбранную карту
+        // Выделяем карту
         const cardElement = document.querySelector(`[data-id="${card.instanceId}"]`);
         if (cardElement) {
             cardElement.classList.add('selected');
@@ -894,98 +1133,265 @@ class BattleScriptClient {
         
         this.selectedCard = card;
         this.updateControls(this.isPlayer && this.gameState.currentTurn === this.getPlayerId());
+        
+        // Если это заклинание, переходим в режим выбора цели
+        if (card.type === 'spell') {
+            this.showSpellTargets(card);
+        }
+    }
+    
+    selectArtifact(artifact) {
+        if (!this.isPlayer || !this.gameState) return;
+        
+        const player = this.gameState.player;
+        if (this.gameState.currentTurn !== player.id) {
+            this.addGameLog('Сейчас не ваш ход', 'error');
+            return;
+        }
+        
+        // Снимаем выделение
+        this.clearSelections();
+        
+        // Выделяем артефакт
+        const artifactElement = document.querySelector(`[data-id="${artifact.instanceId}"]`);
+        if (artifactElement) {
+            artifactElement.classList.add('selected');
+        }
+        
+        this.selectedArtifact = artifact;
+        this.targetMode = 'artifact';
+        this.showArtifactTargets(artifact);
+        
+        this.updateControls(true);
     }
     
     selectAttacker(creature) {
         if (!this.isPlayer || !this.gameState) return;
         
-        const player = this.getPlayer();
-        if (this.gameState.currentTurn !== player.id) return;
+        const player = this.gameState.player;
+        if (this.gameState.currentTurn !== player.id) {
+            this.addGameLog('Сейчас не ваш ход', 'error');
+            return;
+        }
         
         if (!creature.canAttack || creature.hasAttacked) {
             this.addGameLog('Это существо не может атаковать', 'error');
             return;
         }
         
-        // Показываем цели для атаки
+        this.selectedAttacker = creature;
+        this.targetMode = 'attack';
         this.showAttackTargets(creature);
     }
     
     showAttackTargets(attacker) {
-        const opponent = this.getOpponent();
+        const opponent = this.gameState.opponent;
         
         // Подсвечиваем доступные цели
-        document.querySelectorAll('#opponentBoard .card').forEach(card => {
-            const creature = opponent.board.find(c => c.instanceId === card.dataset.id);
+        opponent.board.forEach((creature, cell) => {
             if (creature) {
-                // Проверяем возможность атаки
-                const canAttack = this.canAttackTarget(attacker, creature);
-                if (canAttack) {
-                    card.classList.add('attack-target');
-                    card.addEventListener('click', () => this.executeAttack(attacker.instanceId, creature.instanceId), { once: true });
+                // Проверяем скрытность
+                if (creature.stealth && !creature.hasAttacked) {
+                    return;
+                }
+                
+                const cellElement = document.querySelector(`#opponentBoardGrid [data-cell="${cell}"]`);
+                if (cellElement) {
+                    cellElement.classList.add('attack-target');
+                    
+                    // Добавляем обработчик
+                    const handler = () => {
+                        this.executeAttack(attacker.instanceId, cell.toString());
+                        cellElement.removeEventListener('click', handler);
+                    };
+                    cellElement.addEventListener('click', handler);
                 }
             }
         });
         
-        // Также можно атаковать героя
-        const heroElement = document.querySelector('.opponent-header');
-        if (heroElement && this.canAttackTarget(attacker, { type: 'hero' })) {
-            heroElement.classList.add('attack-target');
-            heroElement.addEventListener('click', () => this.executeAttack(attacker.instanceId, 'hero'), { once: true });
+        // Также можно атаковать героя (если нет существ с провокацией)
+        const hasTaunt = opponent.board.some(c => c && c.abilities?.includes('taunt'));
+        if (!hasTaunt) {
+            const heroElement = document.getElementById('opponentHero');
+            if (heroElement) {
+                heroElement.classList.add('attack-target');
+                
+                const handler = () => {
+                    this.executeAttack(attacker.instanceId, 'hero');
+                    heroElement.removeEventListener('click', handler);
+                };
+                heroElement.addEventListener('click', handler);
+            }
         }
         
-        // Кнопка отмены
-        setTimeout(() => {
-            const cancelHandler = (e) => {
-                if (!e.target.closest('.attack-target')) {
-                    this.clearAttackTargets();
-                    document.removeEventListener('click', cancelHandler);
+        this.addGameLog('Выберите цель для атаки', 'info');
+    }
+    
+    showSpellTargets(spell) {
+        const opponent = this.gameState.opponent;
+        const player = this.gameState.player;
+        
+        this.targetMode = 'spell';
+        
+        // В зависимости от заклинания показываем цели
+        switch (spell.effect) {
+            case 'damage':
+            case 'heal':
+                // Можно выбрать героя или существо
+                if (spell.effect === 'heal') {
+                    // Для исцеления - свои цели
+                    player.board.forEach((creature, cell) => {
+                        if (creature) {
+                            const cellElement = document.querySelector(`#playerBoardGrid [data-cell="${cell}"]`);
+                            if (cellElement) {
+                                cellElement.classList.add('spell-target');
+                                
+                                const handler = () => {
+                                    this.playSpell(spell.instanceId, cell.toString());
+                                    cellElement.removeEventListener('click', handler);
+                                };
+                                cellElement.addEventListener('click', handler);
+                            }
+                        }
+                    });
+                    
+                    // И героя
+                    const heroElement = document.getElementById('playerHero');
+                    if (heroElement) {
+                        heroElement.classList.add('spell-target');
+                        
+                        const handler = () => {
+                            this.playSpell(spell.instanceId, 'hero');
+                            heroElement.removeEventListener('click', handler);
+                        };
+                        heroElement.addEventListener('click', handler);
+                    }
+                } else {
+                    // Для урона - цели противника
+                    opponent.board.forEach((creature, cell) => {
+                        if (creature) {
+                            const cellElement = document.querySelector(`#opponentBoardGrid [data-cell="${cell}"]`);
+                            if (cellElement) {
+                                cellElement.classList.add('spell-target');
+                                
+                                const handler = () => {
+                                    this.playSpell(spell.instanceId, cell.toString());
+                                    cellElement.removeEventListener('click', handler);
+                                };
+                                cellElement.addEventListener('click', handler);
+                            }
+                        }
+                    });
+                    
+                    // И героя противника
+                    const heroElement = document.getElementById('opponentHero');
+                    if (heroElement) {
+                        heroElement.classList.add('spell-target');
+                        
+                        const handler = () => {
+                            this.playSpell(spell.instanceId, 'hero');
+                            heroElement.removeEventListener('click', handler);
+                        };
+                        heroElement.addEventListener('click', handler);
+                    }
                 }
-            };
-            document.addEventListener('click', cancelHandler);
-        }, 100);
-    }
-    
-    clearAttackTargets() {
-        document.querySelectorAll('.attack-target').forEach(el => {
-            el.classList.remove('attack-target');
-        });
-    }
-    
-    canAttackTarget(attacker, target) {
-        if (target.type === 'hero') {
-            // Стрелок может атаковать героя всегда
-            if (attacker.abilities?.includes('archer')) return true;
-            
-            // Летающий может атаковать героя, если нет летающих
-            if (attacker.abilities?.includes('flying')) {
-                const opponent = this.getOpponent();
-                const hasFlyers = opponent.board.some(c => c.abilities?.includes('flying'));
-                return !hasFlyers;
-            }
-            
-            // Обычные могут атаковать героя, если нет существ
-            const opponent = this.getOpponent();
-            return opponent.board.length === 0;
-        } else {
-            // Атака существа
-            if (attacker.abilities?.includes('archer')) {
-                // Стрелок может атаковать только летающих
-                return target.abilities?.includes('flying');
-            }
-            
-            return true;
+                break;
+                
+            case 'damage_all':
+            case 'freeze_all':
+                // Не требуют выбора цели
+                this.playSpell(spell.instanceId, 'all');
+                break;
         }
+        
+        if (spell.effect !== 'damage_all' && spell.effect !== 'freeze_all') {
+            this.addGameLog('Выберите цель для заклинания', 'info');
+        }
+    }
+    
+    showArtifactTargets(artifact) {
+        const player = this.gameState.player;
+        
+        // Можно выбрать героя или существо
+        player.board.forEach((creature, cell) => {
+            if (creature) {
+                // Проверяем требования артефакта
+                const meetsRequirements = artifact.requirements.every(req => {
+                    return creature.tags?.includes(req);
+                });
+                
+                if (meetsRequirements) {
+                    const cellElement = document.querySelector(`#playerBoardGrid [data-cell="${cell}"]`);
+                    if (cellElement) {
+                        cellElement.classList.add('artifact-target');
+                        
+                        const handler = () => {
+                            this.useArtifact(artifact.instanceId, cell.toString());
+                            cellElement.removeEventListener('click', handler);
+                        };
+                        cellElement.addEventListener('click', handler);
+                    }
+                }
+            }
+        });
+        
+        // Некоторые артефакты можно использовать на героя
+        if (!artifact.requirements || artifact.requirements.length === 0) {
+            const heroElement = document.getElementById('playerHero');
+            if (heroElement) {
+                heroElement.classList.add('artifact-target');
+                
+                const handler = () => {
+                    this.useArtifact(artifact.instanceId, 'hero');
+                    heroElement.removeEventListener('click', handler);
+                };
+                heroElement.addEventListener('click', handler);
+            }
+        }
+        
+        this.addGameLog('Выберите цель для артефакта', 'info');
+    }
+    
+    clearSelections() {
+        // Снимаем выделение со всех карт и артефактов
+        document.querySelectorAll('.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        this.selectedCard = null;
+        this.selectedArtifact = null;
+        this.selectedAttacker = null;
+    }
+    
+    cancelTargetMode() {
+        this.clearSelections();
+        this.targetMode = null;
+        
+        // Убираем подсветку целей
+        document.querySelectorAll('.attack-target, .spell-target, .artifact-target').forEach(el => {
+            el.classList.remove('attack-target', 'spell-target', 'artifact-target');
+        });
+        
+        this.updateControls(this.isPlayer && this.gameState.currentTurn === this.getPlayerId());
+        this.addGameLog('Режим выбора цели отменен', 'info');
     }
     
     // Игровые действия
+    initiateAttack() {
+        if (this.targetMode) {
+            this.cancelTargetMode();
+        } else {
+            this.addGameLog('Выберите существо для атаки', 'info');
+        }
+    }
+    
     playCard() {
         if (!this.selectedCard || !this.isPlayer) {
             this.addGameLog('Выберите карту для розыгрыша', 'error');
             return;
         }
         
-        const player = this.getPlayer();
+        const player = this.gameState.player;
         if (this.gameState.currentTurn !== player.id) {
             this.addGameLog('Сейчас не ваш ход', 'error');
             return;
@@ -996,61 +1402,100 @@ class BattleScriptClient {
             return;
         }
         
-        this.sendToServer({
-            type: 'play_card',
-            cardId: this.selectedCard.instanceId,
-            target: null
-        });
-        
-        this.selectedCard = null;
-        this.updateControls(true);
+        // Для существ нужно выбрать ячейку
+        if (this.selectedCard.type === 'creature') {
+            this.addGameLog('Выберите ячейку для существа (1-5)', 'info');
+            
+            // Показываем доступные ячейки
+            for (let i = 0; i < player.board.length; i++) {
+                if (!player.board[i]) {
+                    const cellElement = document.querySelector(`#playerBoardGrid [data-cell="${i}"]`);
+                    if (cellElement) {
+                        cellElement.classList.add('play-target');
+                        
+                        const handler = () => {
+                            this.sendToServer({
+                                type: 'play_card',
+                                cardId: this.selectedCard.instanceId,
+                                cell: i
+                            });
+                            
+                            cellElement.removeEventListener('click', handler);
+                            document.querySelectorAll('.play-target').forEach(el => {
+                                el.classList.remove('play-target');
+                            });
+                        };
+                        cellElement.addEventListener('click', handler);
+                    }
+                }
+            }
+        } else if (this.selectedCard.type === 'spell') {
+            // Для заклинаний уже был выбор цели
+            if (!this.targetMode) {
+                this.showSpellTargets(this.selectedCard);
+            }
+        }
     }
     
-    attack() {
-        this.addGameLog('Выберите существо для атаки', 'info');
+    playSpell(cardId, target) {
+        this.sendToServer({
+            type: 'play_card',
+            cardId: cardId,
+            cell: target
+        });
+        
+        this.cancelTargetMode();
     }
     
     executeAttack(attackerId, targetId) {
-        this.clearAttackTargets();
-        
         this.sendToServer({
             type: 'attack',
             attackerId: attackerId,
             targetId: targetId
         });
+        
+        this.cancelTargetMode();
     }
     
     autoAttack() {
         this.sendToServer({
             type: 'auto_attack'
         });
+        
+        this.cancelTargetMode();
     }
     
     endTurn() {
         this.sendToServer({
             type: 'end_turn'
         });
+        
+        this.cancelTargetMode();
     }
     
-    drawCard() {
+    initiateArtifactUse() {
+        if (this.targetMode === 'artifact') {
+            this.cancelTargetMode();
+        } else if (this.selectedArtifact) {
+            this.showArtifactTargets(this.selectedArtifact);
+        } else {
+            this.addGameLog('Выберите артефакт для использования', 'info');
+        }
+    }
+    
+    useArtifact(artifactId, targetId) {
         this.sendToServer({
-            type: 'draw_card'
+            type: 'use_artifact',
+            artifactId: artifactId,
+            targetId: targetId
         });
+        
+        this.cancelTargetMode();
     }
     
     // Вспомогательные методы
     getPlayer() {
-        if (!this.gameState || !this.isPlayer) return null;
-        
-        const player1 = this.gameState.player1;
-        return player1.id === this.clientId ? player1 : this.gameState.player2;
-    }
-    
-    getOpponent() {
-        if (!this.gameState || !this.isPlayer) return null;
-        
-        const player1 = this.gameState.player1;
-        return player1.id === this.clientId ? this.gameState.player2 : player1;
+        return this.gameState?.player || null;
     }
     
     getPlayerId() {
@@ -1070,7 +1515,6 @@ class BattleScriptClient {
             
             if (this.timeLeft <= 0) {
                 this.stopTurnTimer();
-                // Автоматически завершаем ход
                 if (this.isPlayer && this.gameState.currentTurn === this.getPlayerId()) {
                     this.endTurn();
                 }
@@ -1128,7 +1572,6 @@ class BattleScriptClient {
         container.appendChild(messageElement);
         container.scrollTop = container.scrollHeight;
         
-        // Ограничиваем количество сообщений
         const messages = container.querySelectorAll('.chat-message');
         if (messages.length > GameConfig.ui.maxChatMessages) {
             messages[0].remove();
@@ -1152,7 +1595,6 @@ class BattleScriptClient {
         container.appendChild(logEntry);
         container.scrollTop = container.scrollHeight;
         
-        // Ограничиваем количество записей
         const entries = container.querySelectorAll('.log-entry');
         if (entries.length > GameConfig.ui.maxLogEntries) {
             entries[0].remove();
@@ -1244,8 +1686,7 @@ class BattleScriptClient {
         const container = document.getElementById('topCards');
         if (!container) return;
         
-        // Берем 4 случайные легендарные или эпические карты
-        const topCards = GameConfig.cards
+        const topCards = [...GameConfig.creatureCards, ...GameConfig.spellCards]
             .filter(card => card.rarity === 'legendary' || card.rarity === 'epic')
             .sort(() => Math.random() - 0.5)
             .slice(0, 4);
@@ -1278,11 +1719,9 @@ class BattleScriptClient {
         document.body.classList.toggle('tablet', isTablet && !isMobile);
         document.body.classList.toggle('desktop', !isMobile && !isTablet);
         
-        // Обновляем размеры карт
         const scale = isMobile ? GameConfig.ui.cardScaleMobile : 1;
         document.documentElement.style.setProperty('--card-scale', scale);
         
-        // Обновляем высоту контейнеров
         const gameScreen = document.getElementById('gameScreen');
         if (gameScreen && gameScreen.classList.contains('active-screen')) {
             const headerHeight = document.querySelector('.game-header').offsetHeight;
@@ -1309,7 +1748,7 @@ class BattleScriptClient {
 
 // Инициализация клиента при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎮 Инициализация BattleScript клиента...');
+    console.log('🎮 Инициализация BattleScript клиента v3.0...');
     window.gameClient = new BattleScriptClient();
     
     // Добавляем кнопку отладки

@@ -1,75 +1,97 @@
 @echo off
 chcp 65001
-title BattleScript Server
+title BattleScript Server v3.0
 
 echo ========================================
-echo          BattleScript Server
+echo        BattleScript Server v3.0
 echo ========================================
 echo.
 
 REM Проверка Node.js
 where node >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] Node.js not found
+    echo [ERROR] Node.js не найден
     echo.
-    echo Please install Node.js from:
+    echo Пожалуйста, установите Node.js с:
     echo https://nodejs.org/
     echo.
     pause
     exit /b 1
 )
 
-echo [OK] Node.js found
+echo [OK] Node.js найден
 node --version
 
 echo.
 
 REM Проверка и установка зависимостей
 if not exist "node_modules" (
-    echo [INFO] Installing dependencies...
+    echo [INFO] Установка зависимостей...
     echo.
-    call npm install
+    call npm install ws
     if %errorlevel% neq 0 (
-        echo [ERROR] Failed to install dependencies
+        echo [ERROR] Не удалось установить зависимости
         pause
         exit /b 1
     )
-    echo [OK] Dependencies installed
+    echo [OK] Зависимости установлены
 ) else (
-    echo [OK] Dependencies already installed
+    echo [OK] Зависимости уже установлены
 )
 
 echo.
 
 REM Проверка необходимых файлов
 if not exist "server.js" (
-    echo [ERROR] server.js not found
+    echo [ERROR] server.js не найден
     pause
     exit /b 1
 )
 
 if not exist "config.js" (
-    echo [ERROR] config.js not found
+    echo [ERROR] config.js не найден
     pause
     exit /b 1
 )
 
-echo [OK] All required files found
+if not exist "client.js" (
+    echo [ERROR] client.js не найден
+    pause
+    exit /b 1
+)
+
+if not exist "styles.css" (
+    echo [ERROR] styles.css не найден
+    pause
+    exit /b 1
+)
+
+if not exist "index.html" (
+    echo [ERROR] index.html не найден
+    pause
+    exit /b 1
+)
+
+echo [OK] Все необходимые файлы найдены
 
 echo.
 echo ========================================
-echo           Starting Server
+echo         Запуск сервера v3.0
 echo ========================================
 echo.
-echo [INFO] Local: http://localhost:3000
+echo [INFO] Локально: http://localhost:3000
 echo [INFO] WebSocket: ws://localhost:3000
 echo.
-echo [INFO] Game mode: 1v1 Duel
-echo [INFO] Spectators: Up to 20
-echo [INFO] Turn time: 2 minutes
-echo [INFO] Deck size: 30 cards
+echo [INFO] Режим игры: 1 на 1 с аватарами
+echo [INFO] Особенности:
+echo [INFO]   • 6 аватаров с уникальными бонусами
+echo [INFO]   • 5 ячеек на поле с особыми эффектами
+echo [INFO]   • Карты заклинаний
+echo [INFO]   • Система артефактов и квестов
+echo [INFO]   • Время хода: 2 минуты
+echo [INFO]   • Размер колоды: 30 карт
 echo.
-echo [INFO] Press Ctrl+C to stop server
+echo [INFO] Нажмите Ctrl+C для остановки сервера
 echo ========================================
 echo.
 
@@ -78,11 +100,11 @@ node server.js
 
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] Server failed to start
+    echo [ERROR] Не удалось запустить сервер
     pause
     exit /b 1
 )
 
 echo.
-echo [INFO] Server stopped
+echo [INFO] Сервер остановлен
 pause
