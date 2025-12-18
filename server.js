@@ -323,6 +323,23 @@ class BattleScriptServer {
         const player1Deck = GameConfig.createDeck();
         const player2Deck = GameConfig.createDeck();
         
+<<<<<<< Updated upstream
+=======
+        // Создаем колоду артефактов
+        const artifactDeck = GameConfig.createArtifactDeck(player1.avatar, player2.avatar);
+        
+        // Создаем начальные квесты для игроков (РАЗНЫЕ для каждого)
+        const player1Quest = GameConfig.getRandomQuest();
+        player1Quest.playerId = player1.id;
+        
+        const player2Quest = GameConfig.getRandomQuest();
+        player2Quest.playerId = player2.id;
+        
+        // Получаем данные аватаров
+        const avatar1 = GameConfig.getAvatarById(player1.avatar);
+        const avatar2 = GameConfig.getAvatarById(player2.avatar);
+        
+>>>>>>> Stashed changes
         const game = {
             id: gameId,
             player1: {
@@ -335,7 +352,20 @@ class BattleScriptServer {
                 board: [],
                 deck: player1Deck,
                 cardsPlayed: 0,
+<<<<<<< Updated upstream
                 canAttack: false
+=======
+                creaturesSummoned: 0,
+                damageDealt: 0,
+                creaturesKilled: 0,
+                spellsPlayed: 0,
+                healingDone: 0,
+                artifactsUsed: 0,
+                damageTaken: 0
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
             },
             player2: {
                 id: player2.id,
@@ -347,7 +377,20 @@ class BattleScriptServer {
                 board: [],
                 deck: player2Deck,
                 cardsPlayed: 0,
+<<<<<<< Updated upstream
                 canAttack: false
+=======
+                creaturesSummoned: 0,
+                damageDealt: 0,
+                creaturesKilled: 0,
+                spellsPlayed: 0,
+                healingDone: 0,
+                artifactsUsed: 0,
+                damageTaken: 0
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
             },
             spectators: [],
             currentTurn: Math.random() > 0.5 ? player1.id : player2.id,
@@ -380,7 +423,17 @@ class BattleScriptServer {
         player2.gameId = gameId;
         player2.status = 'in_game';
         
+<<<<<<< Updated upstream
         console.log(`🎮 Создана игра ${gameId}: ${player1.name} vs ${player2.name}`);
+=======
+        console.log(`🎮 Создана игра ${gameId}: ${player1.name} (${player1.avatar}) vs ${player2.name} (${player2.avatar})`);
+        console.log(`📦 Колода артефактов: ${artifactDeck.length} карт`);
+        console.log(`🎯 Квест игрока 1: ${player1Quest.description}`);
+        console.log(`🎯 Квест игрока 2: ${player2Quest.description}`);
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         
         // НЕМЕДЛЕННО отправляем состояние игры игрокам
         this.sendGameStateToPlayers(gameId);
@@ -428,9 +481,38 @@ class BattleScriptServer {
         }
         
         // Разрешаем атаку существам
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
         currentPlayer.board.forEach(creature => {
             creature.canAttack = true;
             creature.hasAttacked = false;
+=======
+=======
+>>>>>>> Stashed changes
+        currentPlayer.board.forEach((creature, index) => {
+            if (creature) {
+                creature.canAttack = true;
+                creature.hasAttacked = false;
+                
+                // Существа в ячейке 1 могут атаковать сразу (исправлено)
+                if (index === 0 && creature.cell === 0) {
+                    creature.charge = true;
+                    creature.canAttack = true;
+                }
+                
+                // Существа в ячейке 5 получают скрытность (исправлено)
+                if (index === 4 && creature.cell === 4 && !creature.stealthUsed) {
+                    creature.stealth = true;
+                    creature.stealthUsed = true;
+                }
+                
+                // Снимаем заморозку
+                if (creature.frozen) {
+                    creature.frozen = false;
+                    creature.canAttack = true;
+                }
+            }
+>>>>>>> Stashed changes
         });
         
         // Устанавливаем таймер хода
@@ -489,6 +571,34 @@ class BattleScriptServer {
             return;
         }
         
+<<<<<<< Updated upstream
+=======
+        // Проверяем ячейку для существ
+        if (card.type === 'creature') {
+            if (cell === undefined || cell < 0 || cell > 4) {
+                this.sendToClient(clientId, {
+                    type: 'error',
+                    message: 'Выберите ячейку для существа (0-4)'
+                });
+                return;
+            }
+            
+            if (player.board[cell]) {
+                this.sendToClient(clientId, {
+                    type: 'error',
+                    message: 'Ячейка уже занята'
+                });
+                return;
+            }
+            
+            // Проверка ячейки 5 (индекс 4) - теперь активна для розыгрыша
+            if (cell === 4) {
+                // Ячейка 5 теперь активна, существо получит скрытность
+                console.log(`🎯 Существо разыграно на ячейку 5 (индекс 4), получит скрытность`);
+            }
+        }
+        
+>>>>>>> Stashed changes
         // Списание маны и удаление карты из руки
         player.mana -= card.cost;
         player.hand.splice(cardIndex, 1);
@@ -500,18 +610,64 @@ class BattleScriptServer {
                 ...card,
                 currentHealth: card.health,
                 maxHealth: card.health,
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
                 canAttack: false, // Не может атаковать в тот же ход
                 hasAttacked: false,
                 owner: clientId
+=======
+=======
+>>>>>>> Stashed changes
+                canAttack: cell === 0, // В ячейке 1 (индекс 0) может атаковать сразу
+                hasAttacked: false,
+                owner: clientId,
+                cell: cell,
+                stealth: cell === 4, // В ячейке 5 (индекс 4) получает скрытность
+                stealthUsed: cell === 4,
+                artifacts: [], // Артефакты на существе
+                bonuses: {
+                    attack: 0,
+                    health: 0,
+                    abilities: []
+                }
+>>>>>>> Stashed changes
             };
             
             player.board.push(creature);
             
+<<<<<<< Updated upstream
             this.addGameLog(game.id, `${player.name} призывает ${card.name}`);
             
         } else if (card.type === 'spell') {
             // Обработка заклинания
             this.handleSpell(card, player, game, target);
+=======
+            this.addGameLog(game.id, `${player.name} призывает ${card.name} в ячейку ${cell + 1}`);
+            
+            // Обновляем квест (ТОЛЬКО для этого игрока)
+            if (player.quest.type === 'summon') {
+                player.quest = GameConfig.checkQuestProgress(player.quest, 'summon', 1, player.id);
+            }
+            
+            // Квест по контролю поля
+            if (player.quest.type === 'board') {
+                const boardCount = player.board.filter(c => c).length;
+                player.quest = GameConfig.checkQuestProgress(player.quest, 'board', boardCount, player.id);
+            }
+            
+        } else if (card.type === 'spell') {
+            // Обработка заклинания
+            player.spellsPlayed++;
+            this.handleSpell(card, player, game, cell);
+            
+            // Обновляем квест (ТОЛЬКО для этого игрока)
+            if (player.quest.type === 'spell') {
+                player.quest = GameConfig.checkQuestProgress(player.quest, 'spell', 1, player.id);
+            }
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         }
         
         // Обновляем состояние
@@ -530,6 +686,7 @@ class BattleScriptServer {
     handleSpell(spell, caster, game, target) {
         const opponent = caster.id === game.player1.id ? game.player2 : game.player1;
         
+<<<<<<< Updated upstream
         if (spell.abilities?.includes('area')) {
             // Площадной урон
             opponent.board.forEach(creature => {
@@ -556,14 +713,132 @@ class BattleScriptServer {
                     creature.currentHealth -= spell.attack;
                     if (creature.currentHealth <= 0) {
                         opponent.board = opponent.board.filter(c => c.instanceId !== target.id);
+=======
+        switch (spell.effect) {
+            case 'damage':
+                if (targetCell === 'hero') {
+                    // Урон герою
+                    opponent.health -= spell.value;
+                    caster.damageDealt += spell.value;
+                    opponent.damageTaken += spell.value;
+                    this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на героя (урон: ${spell.value})`);
+                } else if (targetCell >= 0 && targetCell <= 4) {
+                    // Урон существу
+                    const target = opponent.board[targetCell];
+                    if (target && !target.bonuses?.abilities?.includes('immune_spells')) {
+                        target.currentHealth -= spell.value;
+                        caster.damageDealt += spell.value;
+                        
+                        if (target.currentHealth <= 0) {
+                            opponent.board[targetCell] = null;
+                            caster.creaturesKilled++;
+                            this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на ${target.name} (уничтожено)`);
+                        } else {
+                            this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на ${target.name} (урон: ${spell.value})`);
+                        }
+>>>>>>> Stashed changes
                     }
                     this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на ${creature.name}`);
                 }
+<<<<<<< Updated upstream
             } else {
                 // Урон герою
                 opponent.health -= spell.attack;
                 this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на героя`);
             }
+=======
+                break;
+                
+            case 'heal':
+                if (targetCell === 'hero') {
+                    // Лечение героя
+                    const maxHealth = GameConfig.game.startingHealth + (caster.avatarData?.bonusHealth || 0);
+                    const healAmount = Math.min(spell.value, maxHealth - caster.health);
+                    caster.health = Math.min(caster.health + spell.value, maxHealth);
+                    caster.healingDone += healAmount;
+                    this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на героя (исцеление: ${spell.value})`);
+                } else if (targetCell >= 0 && targetCell <= 4) {
+                    // Лечение существа
+                    const target = caster.board[targetCell];
+                    if (target) {
+                        const healAmount = Math.min(spell.value, target.maxHealth - target.currentHealth);
+                        target.currentHealth += healAmount;
+                        caster.healingDone += healAmount;
+                        this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на ${target.name} (исцеление: ${healAmount})`);
+                    }
+                }
+                break;
+                
+            case 'damage_all':
+                // Урон всем существам противника
+                opponent.board.forEach((creature, index) => {
+                    if (creature) {
+                        creature.currentHealth -= spell.value;
+                        caster.damageDealt += spell.value;
+                        
+                        if (creature.currentHealth <= 0) {
+                            opponent.board[index] = null;
+                            caster.creaturesKilled++;
+                        }
+                    }
+                });
+                this.addGameLog(game.id, `${caster.name} применяет ${spell.name} (урон всем: ${spell.value})`);
+                break;
+                
+            case 'freeze_all':
+                // Заморозка всех существ противника
+                opponent.board.forEach((creature) => {
+                    if (creature) {
+                        creature.canAttack = false;
+                        creature.frozen = true;
+                    }
+                });
+                this.addGameLog(game.id, `${caster.name} применяет ${spell.name} (все существа заморожены)`);
+                break;
+                
+            case 'shield':
+                // Броня цели
+                if (targetCell === 'hero') {
+                    caster.armor = (caster.armor || 0) + spell.value;
+                    this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на героя (броня: +${spell.value})`);
+                } else if (targetCell >= 0 && targetCell <= 4) {
+                    const target = caster.board[targetCell];
+                    if (target) {
+                        target.bonuses = target.bonuses || {};
+                        target.bonuses.abilities = [...(target.bonuses.abilities || []), 'armor'];
+                        target.armor = (target.armor || 0) + spell.value;
+                        this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на ${target.name} (броня: +${spell.value})`);
+                    }
+                }
+                break;
+                
+            case 'buff':
+                // Усиление атаки
+                if (targetCell >= 0 && targetCell <= 4) {
+                    const target = caster.board[targetCell];
+                    if (target) {
+                        target.bonuses = target.bonuses || {};
+                        target.bonuses.attack = (target.bonuses.attack || 0) + spell.value;
+                        this.addGameLog(game.id, `${caster.name} применяет ${spell.name} на ${target.name} (атака: +${spell.value})`);
+                    }
+                }
+                break;
+                
+            case 'mass_heal':
+                // Массовое исцеление
+                caster.board.forEach((creature, index) => {
+                    if (creature) {
+                        const healAmount = Math.min(spell.value, creature.maxHealth - creature.currentHealth);
+                        creature.currentHealth += healAmount;
+                        caster.healingDone += healAmount;
+                    }
+                });
+                this.addGameLog(game.id, `${caster.name} применяет ${spell.name} (исцеление всех: ${spell.value})`);
+                break;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         }
         
         // Проверка победы
@@ -599,6 +874,8 @@ class BattleScriptServer {
             return;
         }
         
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
         let target;
         
         if (targetId === 'hero') {
@@ -622,8 +899,89 @@ class BattleScriptServer {
                 this.sendToClient(clientId, {
                     type: 'error',
                     message: 'Стрелок может атаковать только летающих или героя'
+=======
+=======
+>>>>>>> Stashed changes
+        // Проверка на скрытность цели (исправлено)
+        if (targetId !== 'hero') {
+            const targetCell = parseInt(targetId);
+            const target = opponent.board[targetCell];
+            
+            if (target && target.stealth && !target.hasAttacked) {
+                this.sendToClient(clientId, {
+                    type: 'error',
+                    message: 'Нельзя атаковать скрытое существо (ячейка 5)'
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                 });
                 return;
+            }
+        }
+        
+        // ИСПРАВЛЕНО: Проверка защитника напротив
+        if (targetId === 'hero') {
+            // Проверяем, есть ли существо напротив атакующего
+            const oppositeCell = attackerCell;
+            const defender = opponent.board[oppositeCell];
+<<<<<<< Updated upstream
+=======
+            
+            if (defender && !defender.stealth) {
+                this.sendToClient(clientId, {
+                    type: 'error',
+                    message: `Вы не можете атаковать героя, так как напротив вас находится ${defender.name}`
+                });
+                return;
+            }
+            
+            // Также проверяем существа с Провокацией
+            const hasTaunt = opponent.board.some(c => c && c.abilities?.includes('taunt'));
+            if (hasTaunt) {
+                for (let i = 0; i < opponent.board.length; i++) {
+                    const creature = opponent.board[i];
+                    if (creature && creature.abilities?.includes('taunt')) {
+                        this.sendToClient(clientId, {
+                            type: 'error',
+                            message: `Вы должны атаковать существо с Провокацией: ${creature.name}`
+                        });
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // Выполнение атаки
+        const result = this.executeAttack(attacker, targetId, player, opponent, game, attackerCell);
+        
+        if (result.success) {
+            attacker.hasAttacked = true;
+            attacker.canAttack = false;
+            attacker.stealth = false; // Снимаем скрытность после атаки
+>>>>>>> Stashed changes
+            
+            if (defender && !defender.stealth) {
+                this.sendToClient(clientId, {
+                    type: 'error',
+                    message: `Вы не можете атаковать героя, так как напротив вас находится ${defender.name}`
+                });
+                return;
+            }
+            
+            // Также проверяем существа с Провокацией
+            const hasTaunt = opponent.board.some(c => c && c.abilities?.includes('taunt'));
+            if (hasTaunt) {
+                for (let i = 0; i < opponent.board.length; i++) {
+                    const creature = opponent.board[i];
+                    if (creature && creature.abilities?.includes('taunt')) {
+                        this.sendToClient(clientId, {
+                            type: 'error',
+                            message: `Вы должны атаковать существо с Провокацией: ${creature.name}`
+                        });
+                        return;
+                    }
+                }
             }
         }
         
@@ -645,10 +1003,41 @@ class BattleScriptServer {
             this.sendToAllInGame(game.id, {
                 type: 'attack_executed',
                 attacker: attacker.name,
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
                 target: target.type === 'hero' ? 'Герой' : target.name,
                 damage: result.damage
             });
             
+=======
+                target: result.targetName,
+                damage: result.damageDealt || 0,
+                killed: result.creatureKilled || false,
+                attackerDied: result.attackerDied || false
+            });
+            
+=======
+                target: result.targetName,
+                damage: result.damageDealt || 0,
+                killed: result.creatureKilled || false,
+                attackerDied: result.attackerDied || false
+            });
+            
+>>>>>>> Stashed changes
+            // Обновляем квест по урону (ТОЛЬКО для этого игрока)
+            if (player.quest.type === 'damage') {
+                player.quest = GameConfig.checkQuestProgress(player.quest, 'damage', result.damageDealt || 0, player.id);
+            }
+            
+            // Обновляем квест по убийствам (ТОЛЬКО для этого игрока)
+            if (player.quest.type === 'kill' && result.creatureKilled) {
+                player.quest = GameConfig.checkQuestProgress(player.quest, 'kill', 1, player.id);
+            }
+            
+            // Проверяем выполнение квеста
+            this.checkQuestCompletion(game.id, player.id);
+            
+>>>>>>> Stashed changes
             // Проверка победы
             if (opponent.health <= 0) {
                 this.endGame(game.id, player.id);
@@ -668,11 +1057,82 @@ class BattleScriptServer {
                 targetDestroyed: targetPlayer.health <= 0
             };
             
+<<<<<<< Updated upstream
         } else {
             // Атака существа
             // Учитываем щит
             if (target.abilities?.includes('shield')) {
                 damage = Math.max(1, damage - 1);
+=======
+            // Проверяем существ с провокацией
+            const tauntCreatures = targetPlayer.board.filter(c => c && c.abilities?.includes('taunt'));
+            if (tauntCreatures.length > 0) {
+                // Находим первую провокацию
+                for (let i = 0; i < targetPlayer.board.length; i++) {
+                    if (targetPlayer.board[i] && targetPlayer.board[i].abilities?.includes('taunt')) {
+                        target = targetPlayer.board[i];
+                        targetCell = i;
+                        targetName = target.name;
+                        break;
+                    }
+                }
+            } else {
+                // Можно атаковать героя
+                const attackPower = attacker.attack + (attacker.bonuses?.attack || 0);
+                
+                // Учитываем броню героя
+                const armor = targetPlayer.armor || 0;
+                let actualDamage = Math.max(0, attackPower - armor);
+                targetPlayer.health -= actualDamage;
+                
+                return {
+                    success: true,
+                    damageDealt: actualDamage,
+                    targetName: 'героя'
+                };
+            }
+        } else {
+            // Атака существа
+            targetCell = parseInt(targetId);
+            target = targetPlayer.board[targetCell];
+            if (!target) {
+                return { success: false, error: 'Цель не найдена' };
+            }
+            targetName = target.name;
+        }
+        
+        // Вычисляем урон
+        const attackPower = attacker.attack + (attacker.bonuses?.attack || 0);
+        const targetHealth = target.currentHealth + (target.bonuses?.health || 0);
+        
+        // Учитываем броню и способности
+        let actualDamage = attackPower;
+        const targetArmor = target.armor || 0;
+        if (target.bonuses?.abilities?.includes('armor')) {
+            actualDamage = Math.max(1, actualDamage - 3 - targetArmor);
+        } else if (targetArmor > 0) {
+            actualDamage = Math.max(0, actualDamage - targetArmor);
+        }
+        
+        target.currentHealth -= actualDamage;
+        
+        // Контратака (если цель выжила и не заморожена)
+        let counterDamage = 0;
+        let counterDealt = 0;
+        
+        if (target.currentHealth > 0 && !target.frozen) {
+            counterDamage = target.attack + (target.bonuses?.attack || 0);
+            let actualCounterDamage = counterDamage;
+            
+            const attackerArmor = attacker.armor || 0;
+            if (attacker.bonuses?.abilities?.includes('armor')) {
+                actualCounterDamage = Math.max(1, actualCounterDamage - 3 - attackerArmor);
+            } else if (attackerArmor > 0) {
+                actualCounterDamage = Math.max(0, actualCounterDamage - attackerArmor);
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
             }
             
             target.currentHealth -= damage;
@@ -728,11 +1188,37 @@ class BattleScriptServer {
         const player = game.currentTurn === game.player1.id ? game.player1 : game.player2;
         const opponent = player.id === game.player1.id ? game.player2 : game.player1;
         
+        // Проверяем, есть ли существа для атаки
+        const hasCreatures = player.board.some(creature => creature && creature.canAttack && !creature.hasAttacked);
+        if (!hasCreatures) {
+            this.sendToClient(clientId, {
+                type: 'error',
+                message: 'Нет существ для авто-атаки'
+            });
+            return;
+        }
+<<<<<<< Updated upstream
+=======
+        
+        let attacks = [];
+        let totalDamage = 0;
+        let creaturesKilled = 0;
+>>>>>>> Stashed changes
+        
         let attacks = [];
         
+<<<<<<< Updated upstream
         player.board.forEach(attacker => {
             if (attacker.canAttack && !attacker.hasAttacked) {
                 const target = this.findAutoAttackTarget(attacker, opponent);
+=======
+        player.board.forEach((attacker, cellIndex) => {
+            if (attacker && attacker.canAttack && !attacker.hasAttacked) {
+                const target = this.findAutoAttackTarget(attacker, opponent, cellIndex);
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                 if (target) {
                     const result = this.executeAttack(attacker, target, player, opponent, game);
                     if (result) {
@@ -752,6 +1238,23 @@ class BattleScriptServer {
         if (attacks.length > 0) {
             this.addGameLog(game.id, `${player.name}: авто-атака (${attacks.length} ударов)`);
             
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+=======
+>>>>>>> Stashed changes
+            // Обновляем квест (ТОЛЬКО для этого игрока)
+            if (player.quest.type === 'damage') {
+                player.quest = GameConfig.checkQuestProgress(player.quest, 'damage', totalDamage, player.id);
+            }
+            if (player.quest.type === 'kill') {
+                player.quest = GameConfig.checkQuestProgress(player.quest, 'kill', creaturesKilled, player.id);
+            }
+            
+            // Проверяем выполнение квеста
+            this.checkQuestCompletion(game.id, player.id);
+            
+>>>>>>> Stashed changes
             this.sendGameStateToPlayers(game.id);
             this.broadcastGameStateToSpectators(game.id);
             
@@ -768,8 +1271,10 @@ class BattleScriptServer {
         }
     }
     
-    findAutoAttackTarget(attacker, opponent) {
+    findAutoAttackTarget(attacker, opponent, attackerCell) {
         // Приоритеты атаки:
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
         // 1. Существа с Провокацией
         // 2. Противоположное существо
         // 3. Любое существо
@@ -786,24 +1291,262 @@ class BattleScriptServer {
             const flyers = opponent.board.filter(c => c.abilities?.includes('flying'));
             if (flyers.length > 0) {
                 return flyers[0];
+=======
+        // 1. Существа с Провокацией (не скрытые)
+        // 2. Существо напротив (если есть)
+        // 3. Другие существа (не скрытые)
+        // 4. Герой
+        
+=======
+        // 1. Существа с Провокацией (не скрытые)
+        // 2. Существо напротив (если есть)
+        // 3. Другие существа (не скрытые)
+        // 4. Герой
+        
+>>>>>>> Stashed changes
+        // 1. Ищем существа с провокацией
+        for (let i = 0; i < opponent.board.length; i++) {
+            const creature = opponent.board[i];
+            if (creature && creature.abilities?.includes('taunt') && 
+                (!creature.stealth || creature.hasAttacked)) {
+                return { ...creature, cell: i, type: 'creature' };
+>>>>>>> Stashed changes
             }
             return { type: 'hero', health: opponent.health };
         }
         
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
         if (attacker.abilities?.includes('flying')) {
             // Летающий может атаковать любого
             if (opponent.board.length > 0) {
                 return opponent.board[0];
+=======
+=======
+>>>>>>> Stashed changes
+        // 2. Проверяем существо напротив
+        const defender = opponent.board[attackerCell];
+        if (defender && (!defender.stealth || defender.hasAttacked)) {
+            return { ...defender, cell: attackerCell, type: 'creature' };
+        }
+        
+        // 3. Ищем любые не скрытые существа
+        for (let i = 0; i < opponent.board.length; i++) {
+            const creature = opponent.board[i];
+            if (creature && (!creature.stealth || creature.hasAttacked)) {
+                return { ...creature, cell: i, type: 'creature' };
+>>>>>>> Stashed changes
             }
             return { type: 'hero', health: opponent.health };
         }
         
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
         // Обычная атака
         if (opponent.board.length > 0) {
             return opponent.board[0];
         }
         
         return { type: 'hero', health: opponent.health };
+=======
+=======
+>>>>>>> Stashed changes
+        // 4. Если нет доступных целей, атакуем героя
+        // Проверяем, есть ли защитник напротив
+        if (!defender || defender.stealth || defender.hasAttacked) {
+            return { type: 'hero', name: 'Герой' };
+        }
+        
+        return null;
+    }
+    
+    handleUseArtifact(clientId, artifactId, targetId) {
+        const client = this.clients.get(clientId);
+        if (!client || !client.gameId) return;
+        
+        const game = this.games.get(client.gameId);
+        if (!game) return;
+        
+        const player = game.currentTurn === game.player1.id ? game.player1 : game.player2;
+        
+        // Находим артефакт
+        const artifactIndex = player.artifacts.findIndex(art => art.instanceId === artifactId);
+        if (artifactIndex === -1) {
+            this.sendToClient(clientId, {
+                type: 'error',
+                message: 'Артефакт не найден'
+            });
+            return;
+        }
+        
+        const artifact = player.artifacts[artifactIndex];
+        
+        // Проверяем цель
+        let target = null;
+        if (targetId === 'hero') {
+            target = { type: 'hero' };
+        } else {
+            const targetCell = parseInt(targetId);
+            if (targetCell >= 0 && targetCell <= 4) {
+                target = player.board[targetCell];
+            }
+        }
+        
+        if (!target) {
+            this.sendToClient(clientId, {
+                type: 'error',
+                message: 'Цель не найдена'
+            });
+            return;
+        }
+        
+        // Проверяем требования артефакта
+        if (target.type === 'hero' && artifact.requirements && artifact.requirements.length > 0) {
+            const meetsRequirements = artifact.requirements.every(req => {
+                // Для героя проверяем теги аватара
+                const avatarData = GameConfig.getAvatarById(player.avatar);
+                return avatarData?.tags?.includes(req) || false;
+            });
+            
+            if (!meetsRequirements) {
+                this.sendToClient(clientId, {
+                    type: 'error',
+                    message: 'Герой не соответствует требованиям артефакта'
+                });
+                return;
+            }
+        }
+        
+        if (target.type === 'creature') {
+            // Проверяем теги существа
+            const meetsRequirements = artifact.requirements.every(req => {
+                return target.tags?.includes(req);
+            });
+            
+            if (!meetsRequirements) {
+                this.sendToClient(clientId, {
+                    type: 'error',
+                    message: 'Существо не соответствует требованиям артефакта'
+                });
+                return;
+            }
+        }
+        
+        // Применяем эффект артефакта
+        this.applyArtifactEffect(artifact, target, player, targetId);
+        
+        // Удаляем артефакт из инвентаря
+        player.artifacts.splice(artifactIndex, 1);
+        player.artifactsUsed++;
+        
+        this.addGameLog(game.id, `${player.name} использует ${artifact.name} на ${target.type === 'hero' ? 'героя' : target.name}`);
+        
+        // Обновляем квест по артефактам (ТОЛЬКО для этого игрока)
+        if (player.quest.type === 'artifact') {
+            player.quest = GameConfig.checkQuestProgress(player.quest, 'artifact', 1, player.id);
+        }
+        
+        // Проверяем выполнение квеста
+        this.checkQuestCompletion(game.id, player.id);
+        
+        this.sendGameStateToPlayers(game.id);
+        this.broadcastGameStateToSpectators(game.id);
+        
+        this.sendToAllInGame(game.id, {
+            type: 'artifact_used',
+            playerName: player.name,
+            artifact: artifact.name,
+            target: target.type === 'hero' ? 'Герой' : target.name
+        });
+    }
+    
+    applyArtifactEffect(artifact, target, player, targetId) {
+        switch (artifact.effect) {
+            case 'attack_buff':
+                if (target.type === 'creature') {
+                    target.bonuses = target.bonuses || {};
+                    target.bonuses.attack = (target.bonuses.attack || 0) + artifact.value;
+                }
+                break;
+                
+            case 'health_buff':
+                if (target.type === 'creature') {
+                    target.bonuses = target.bonuses || {};
+                    target.bonuses.health = (target.bonuses.health || 0) + artifact.value;
+                    target.currentHealth += artifact.value;
+                    target.maxHealth += artifact.value;
+                } else if (target.type === 'hero') {
+                    const maxHealth = GameConfig.game.startingHealth + (player.avatarData?.bonusHealth || 0);
+                    player.health = Math.min(player.health + artifact.value, maxHealth);
+                }
+                break;
+                
+            case 'spell_power':
+                // Увеличивает силу будущих заклинаний
+                player.spellPower = (player.spellPower || 0) + artifact.value;
+                break;
+                
+            case 'ranged':
+                if (target.type === 'creature') {
+                    target.bonuses = target.bonuses || {};
+                    target.bonuses.abilities = [...(target.bonuses.abilities || []), 'ranged'];
+                }
+                break;
+                
+            case 'armor':
+                if (target.type === 'creature') {
+                    target.bonuses = target.bonuses || {};
+                    target.bonuses.abilities = [...(target.bonuses.abilities || []), 'armor'];
+                    target.armor = (target.armor || 0) + artifact.value;
+                } else if (target.type === 'hero') {
+                    player.armor = (player.armor || 0) + artifact.value;
+                }
+                break;
+                
+            case 'flying':
+                if (target.type === 'creature') {
+                    target.bonuses = target.bonuses || {};
+                    target.bonuses.abilities = [...(target.bonuses.abilities || []), 'flying'];
+                }
+                break;
+                
+            case 'speed':
+                if (target.type === 'creature') {
+                    target.charge = true;
+                    target.canAttack = true;
+                }
+                break;
+                
+            case 'royal_aura':
+                // Увеличивает атаку и здоровье всех существ игрока
+                player.board.forEach(creature => {
+                    if (creature) {
+                        creature.bonuses = creature.bonuses || {};
+                        creature.bonuses.attack = (creature.bonuses.attack || 0) + artifact.value;
+                        creature.bonuses.health = (creature.bonuses.health || 0) + artifact.value;
+                        creature.currentHealth += artifact.value;
+                        creature.maxHealth += artifact.value;
+                    }
+                });
+                break;
+                
+            case 'draw_cards':
+                // Игрок берет дополнительные карты
+                for (let i = 0; i < artifact.value; i++) {
+                    if (player.deck.length > 0 && player.hand.length < GameConfig.game.maxHandSize) {
+                        const newCard = player.deck.shift();
+                        newCard.instanceId = `${newCard.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                        player.hand.push(newCard);
+                    }
+                }
+                break;
+        }
+        
+        // Добавляем артефакт к существу
+        if (target.type === 'creature') {
+            target.artifacts = [...(target.artifacts || []), artifact];
+        }
+>>>>>>> Stashed changes
     }
     
     handleEndTurn(clientId) {
@@ -828,6 +1571,29 @@ class BattleScriptServer {
         const game = this.games.get(gameId);
         if (!game) return;
         
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+=======
+>>>>>>> Stashed changes
+        const currentPlayer = game.currentTurn === game.player1.id ? game.player1 : game.player2;
+        const opponent = currentPlayer.id === game.player1.id ? game.player2 : game.player1;
+        
+        // Обновляем квест по лечению (ТОЛЬКО для этого игрока)
+        if (currentPlayer.quest.type === 'heal') {
+            currentPlayer.quest = GameConfig.checkQuestProgress(currentPlayer.quest, 'heal', currentPlayer.healingDone, currentPlayer.id);
+        }
+        
+        // Обновляем квест по полученному урону (ТОЛЬКО для этого игрока)
+        if (currentPlayer.quest.type === 'survive') {
+            opponent.quest = GameConfig.checkQuestProgress(opponent.quest, 'survive', opponent.damageTaken, opponent.id);
+        }
+        
+        // Проверяем выполнение квеста (для обоих игроков)
+        this.checkQuestCompletion(gameId, currentPlayer.id);
+        this.checkQuestCompletion(gameId, opponent.id);
+        
+>>>>>>> Stashed changes
         // Меняем ход
         game.currentTurn = game.currentTurn === game.player1.id ? game.player2.id : game.player1.id;
         game.turnNumber++;
@@ -843,12 +1609,45 @@ class BattleScriptServer {
         const game = this.games.get(client.gameId);
         if (!game) return;
         
+<<<<<<< Updated upstream
         if (game.currentTurn !== clientId) {
             this.sendToClient(clientId, {
                 type: 'error',
                 message: 'Сейчас не ваш ход'
             });
             return;
+=======
+        const player = playerId === game.player1.id ? game.player1 : game.player2;
+        
+        if (player.quest.completed && !player.quest.rewardGranted) {
+            // Выдаем награду
+            const reward = GameConfig.getQuestReward(player.quest);
+            if (reward) {
+                // Создаем экземпляр артефакта
+                const artifactInstance = {
+                    ...reward,
+                    instanceId: `${reward.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+                };
+                
+                player.artifacts.push(artifactInstance);
+                
+                this.addGameLog(gameId, `${player.name} получает артефакт: ${reward.name} за выполнение квеста!`);
+                
+                // Создаем новый квест (ТОЛЬКО для этого игрока)
+                player.quest = GameConfig.getRandomQuest();
+                player.quest.playerId = player.id;
+                
+                // Отправляем обновленное состояние
+                this.sendGameStateToPlayers(gameId);
+                this.broadcastGameStateToSpectators(gameId);
+                
+                this.sendToClient(playerId, {
+                    type: 'quest_completed',
+                    artifact: artifactInstance,
+                    newQuest: player.quest
+                });
+            }
+>>>>>>> Stashed changes
         }
         
         const player = game.currentTurn === game.player1.id ? game.player1 : game.player2;
@@ -1136,6 +1935,7 @@ class BattleScriptServer {
         
         return {
             id: game.id,
+<<<<<<< Updated upstream
             player1: {
                 id: game.player1.id,
                 name: game.player1.name,
@@ -1157,6 +1957,71 @@ class BattleScriptServer {
                 board: game.player2.board,
                 deckSize: game.player2.deck.length,
                 cardsPlayed: game.player2.cardsPlayed
+=======
+            player: {
+                id: player.id,
+                name: player.name,
+                avatar: player.avatar,
+                avatarData: GameConfig.getAvatarById(player.avatar),
+                health: player.health,
+                armor: player.armor || 0,
+                mana: player.mana,
+                maxMana: player.maxMana,
+                hand: player.hand.map(card => ({
+                    ...card,
+                    owner: player.id
+                })),
+                board: player.board.map((creature, index) => 
+                    creature ? {
+                        ...creature,
+                        cell: index,
+                        canAttack: creature.canAttack,
+                        hasAttacked: creature.hasAttacked,
+                        stealth: creature.stealth,
+                        frozen: creature.frozen,
+                        charge: creature.charge,
+                        artifacts: creature.artifacts || []
+                    } : null
+                ),
+                deckSize: player.deck.length,
+                artifacts: player.artifacts,
+                quest: player.quest,
+                cardsPlayed: player.cardsPlayed,
+                spellPower: player.spellPower || 0
+            },
+            opponent: {
+                id: opponent.id,
+                name: opponent.name,
+                avatar: opponent.avatar,
+                avatarData: GameConfig.getAvatarById(opponent.avatar),
+                health: opponent.health,
+                armor: opponent.armor || 0,
+                mana: opponent.mana,
+                maxMana: opponent.maxMana,
+                handSize: opponent.hand.length,
+                board: opponent.board.map((creature, index) => 
+                    creature ? {
+                        ...creature,
+                        cell: index,
+                        // Скрываем полную информацию о существах противника
+                        currentHealth: creature.currentHealth,
+                        maxHealth: creature.maxHealth,
+                        attack: creature.attack + (creature.bonuses?.attack || 0),
+                        name: creature.name,
+                        abilities: creature.abilities,
+                        stealth: creature.stealth,
+                        hasAttacked: creature.hasAttacked,
+                        canAttack: creature.canAttack,
+                        frozen: creature.frozen,
+                        charge: creature.charge
+                    } : null
+                ),
+                deckSize: opponent.deck.length,
+                artifactsCount: opponent.artifacts.length
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
             },
             currentTurn: game.currentTurn,
             turnNumber: game.turnNumber,
@@ -1172,21 +2037,81 @@ class BattleScriptServer {
             id: game.id,
             player1: {
                 name: game.player1.name,
+<<<<<<< Updated upstream
+=======
+                avatar: game.player1.avatar,
+                avatarData: GameConfig.getAvatarById(game.player1.avatar),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                 health: game.player1.health,
+                armor: game.player1.armor || 0,
                 mana: game.player1.mana,
                 maxMana: game.player1.maxMana,
                 handSize: game.player1.hand.length,
+<<<<<<< Updated upstream
                 board: game.player1.board,
                 deckSize: game.player1.deck.length
             },
             player2: {
                 name: game.player2.name,
+=======
+                board: game.player1.board.map((creature, index) => 
+                    creature ? {
+                        ...creature,
+                        cell: index,
+                        currentHealth: creature.currentHealth,
+                        maxHealth: creature.maxHealth,
+                        attack: creature.attack + (creature.bonuses?.attack || 0),
+                        name: creature.name,
+                        abilities: creature.abilities,
+                        stealth: creature.stealth,
+                        hasAttacked: creature.hasAttacked,
+                        canAttack: creature.canAttack,
+                        frozen: creature.frozen,
+                        charge: creature.charge
+                    } : null
+                ),
+                deckSize: game.player1.deck.length,
+                artifacts: game.player1.artifacts.length
+            },
+            player2: {
+                name: game.player2.name,
+                avatar: game.player2.avatar,
+                avatarData: GameConfig.getAvatarById(game.player2.avatar),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                 health: game.player2.health,
+                armor: game.player2.armor || 0,
                 mana: game.player2.mana,
                 maxMana: game.player2.maxMana,
                 handSize: game.player2.hand.length,
+<<<<<<< Updated upstream
                 board: game.player2.board,
                 deckSize: game.player2.deck.length
+=======
+                board: game.player2.board.map((creature, index) => 
+                    creature ? {
+                        ...creature,
+                        cell: index,
+                        currentHealth: creature.currentHealth,
+                        maxHealth: creature.maxHealth,
+                        attack: creature.attack + (creature.bonuses?.attack || 0),
+                        name: creature.name,
+                        abilities: creature.abilities,
+                        stealth: creature.stealth,
+                        hasAttacked: creature.hasAttacked,
+                        canAttack: creature.canAttack,
+                        frozen: creature.frozen,
+                        charge: creature.charge
+                    } : null
+                ),
+                deckSize: game.player2.deck.length,
+                artifacts: game.player2.artifacts.length
+>>>>>>> Stashed changes
             },
             currentTurn: game.currentTurn,
             turnNumber: game.turnNumber,
