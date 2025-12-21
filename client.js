@@ -11,7 +11,7 @@ class BattleScriptProClient {
         
         this.selectedCard = null;
         this.selectedArtifact = null;
-        this.selectedAttacker = null;
+        this.selectedCreature = null;
         this.targetMode = null;
         
         this.turnTimer = null;
@@ -21,8 +21,9 @@ class BattleScriptProClient {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         
-        this.sidePanelOpen = false;
+        this.sidePanelOpen = true;
         this.cardTooltip = null;
+        this.contextMenu = null;
         
         this.initialize();
     }
@@ -34,6 +35,7 @@ class BattleScriptProClient {
         this.setupAvatarSelection();
         this.connectToServer();
         this.setupCardTooltip();
+        this.createContextMenu();
         
         window.addEventListener('resize', () => this.handleResize());
         window.addEventListener('beforeunload', () => this.cleanup());
@@ -68,39 +70,32 @@ class BattleScriptProClient {
             });
         });
         
-        // Игровой экран
-        document.getElementById('attackBtn').addEventListener('click', () => this.initiateAttack());
-        document.getElementById('playCardBtn').addEventListener('click', () => this.playSelectedCard());
-        document.getElementById('autoAttackBtn').addEventListener('click', () => this.autoAttack());
-        document.getElementById('useArtifactBtn').addEventListener('click', () => this.useSelectedArtifact());
+        // Игровой экран - кнопка завершения хода
         document.getElementById('endTurnBtn').addEventListener('click', () => this.endTurn());
         
         // Боковая панель
         document.getElementById('panelToggle').addEventListener('click', () => this.toggleSidePanel());
         
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
                 const tab = btn.dataset.tab;
                 this.switchTab(tab);
             });
         });
         
-        // Чат
-        document.getElementById('sendChatBtn').addEventListener('click', () => this.sendChatMessage());
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.sendChatMessage();
-        });
-        
-        // Колоды
+        // Колоды (новые элементы в правом верхнем углу)
         document.getElementById('artifactDeckSide').addEventListener('click', () => this.showArtifactInfo());
         document.getElementById('playerDeckSide').addEventListener('click', () => this.showDeckInfo());
         
-        // Клик вне режима выбора цели
+        // Клик вне контекстного меню
         document.addEventListener('click', (e) => {
+            if (this.contextMenu && !e.target.closest('.context-menu') && !e.target.closest('.context-menu-btn')) {
+                this.hideContextMenu();
+            }
             if (this.targetMode && 
                 !e.target.closest('.card-in-hand') && 
                 !e.target.closest('.board-cell') && 
-                !e.target.closest('.control-btn')) {
+                !e.target.closest('.context-menu-btn')) {
                 this.cancelTargetMode();
             }
         });
@@ -138,7 +133,7 @@ class BattleScriptProClient {
             option.dataset.avatar = avatar.id;
             
             option.innerHTML = `
-                <img src="${avatar.image}" alt="${avatar.name}" onerror="this.src='https://i.imgur.com/6V9zLqW.png'">
+                <img src="${avatar.image}" alt="${avatar.name}" onerror="this.src='./assets/images/warrior.jpg'">
                 <div class="avatar-name">${avatar.name}</div>
                 <div class="avatar-description">${avatar.description}</div>
             `;
@@ -157,6 +152,84 @@ class BattleScriptProClient {
         this.cardTooltip = document.createElement('div');
         this.cardTooltip.className = 'card-tooltip';
         document.body.appendChild(this.cardTooltip);
+    }
+    
+    createContextMenu() {
+        this.contextMenu = document.createElement('div');
+        this.contextMenu.className = 'context-menu';
+        this.contextMenu.innerHTML = `
+            <button class="context-menu-btn btn-play" data-action="play">
+                <i class="fas fa-play"></i>
+                <span>Играть</span>
+            </button>
+            <button class="context-menu-btn btn-attack" data-action="attack">
+                <i class="fas fa-fist-raised"></i>
+                <span>Атака</span>
+            </button>
+            <button class="context-menu-btn btn-artifact" data-action="use">
+                <i class="fas fa-magic"></i>
+                <span>Использовать</span>
+            </button>
+            <button class="context-menu-btn btn-cancel" data-action="cancel">
+                <i class="fas fa-times"></i>
+                <span>Отмена</span>
+            </button>
+        `;
+        
+        this.contextMenu.querySelectorAll('.context-menu-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = e.currentTarget.dataset.action;
+                this.handleContextAction(action);
+                this.hideContextMenu();
+            });
+        });
+        
+        document.body.appendChild(this.contextMenu);
+    }
+    
+    showContextMenu(x, y, options) {
+        if (!this.contextMenu) return;
+        
+        // Показываем только нужные кнопки
+        this.contextMenu.querySelectorAll('.context-menu-btn').forEach(btn => {
+            const action = btn.dataset.action;
+            btn.style.display = options[action] ? 'flex' : 'none';
+        });
+        
+        this.contextMenu.style.left = `${x}px`;
+        this.contextMenu.style.top = `${y}px`;
+        this.contextMenu.style.display = 'block';
+    }
+    
+    hideContextMenu() {
+        if (this.contextMenu) {
+            this.contextMenu.style.display = 'none';
+        }
+    }
+    
+    handleContextAction(action) {
+        switch (action) {
+            case 'play':
+                if (this.selectedCard) {
+                    this.playSelectedCard();
+                }
+                break;
+            case 'attack':
+                if (this.selectedCreature) {
+                    this.initiateAttack();
+                }
+                break;
+            case 'use':
+                if (this.selectedCard && this.selectedCard.type === 'spell') {
+                    this.useSpell();
+                } else if (this.selectedArtifact) {
+                    this.useArtifact();
+                }
+                break;
+            case 'cancel':
+                this.clearSelections();
+                break;
+        }
     }
     
     showCardTooltip(card, x, y) {
@@ -326,9 +399,6 @@ class BattleScriptProClient {
             case 'attack_executed':
                 this.handleAttackExecuted(data);
                 break;
-            case 'auto_attack':
-                this.handleAutoAttack(data);
-                break;
             case 'artifact_used':
                 this.handleArtifactUsed(data);
                 break;
@@ -337,9 +407,6 @@ class BattleScriptProClient {
                 break;
             case 'card_added':
                 this.handleCardAdded(data);
-                break;
-            case 'chat_message':
-                this.handleChatMessage(data);
                 break;
             case 'error':
                 this.handleError(data);
@@ -363,7 +430,6 @@ class BattleScriptProClient {
         this.hideNameModal();
         
         this.addGameLog(`Вы вошли как ${this.playerName}`, 'success');
-        this.playSound('login');
     }
     
     handleServerInfo(data) {
@@ -409,7 +475,6 @@ class BattleScriptProClient {
         
         this.showGameScreen();
         this.addGameLog('Игра началась!', 'success');
-        this.playSound('gameStart');
         this.hideLoading();
     }
     
@@ -421,13 +486,11 @@ class BattleScriptProClient {
         this.addGameLog(data.message, data.winnerId === this.clientId ? 'success' : 'error');
         
         if (data.winnerId === this.clientId) {
-            this.playSound('victory');
             setTimeout(() => {
                 alert(`🎉 Победа! ${data.message}`);
                 this.returnToMain();
             }, 1000);
         } else {
-            this.playSound('defeat');
             setTimeout(() => {
                 alert(`💥 Поражение. ${data.message}`);
                 this.returnToMain();
@@ -443,13 +506,6 @@ class BattleScriptProClient {
             this.addGameLog(`Ход ${data.playerName}`, 'info');
             this.updateGameBoard();
             
-            if (this.isPlayer && data.currentTurn === this.clientId) {
-                this.addGameLog('Ваш ход!', 'success');
-                this.playSound('yourTurn');
-            } else if (this.isPlayer) {
-                this.playSound('opponentTurn');
-            }
-            
             this.clearSelections();
         }
     }
@@ -457,42 +513,25 @@ class BattleScriptProClient {
     handleCardPlayed(data) {
         if (data.playerId !== this.clientId) {
             this.addGameLog(`${data.playerName} разыгрывает карту`, 'info');
-            this.playSound('cardPlay');
         }
     }
     
     handleAttackExecuted(data) {
         this.addGameLog(`${data.attacker} атакует ${data.target}`, 'attack');
-        this.playSound('attack');
-    }
-    
-    handleAutoAttack(data) {
-        this.addGameLog(`${data.playerName} использует авто-атаку`, 'info');
-        this.playSound('attack');
     }
     
     handleArtifactUsed(data) {
         this.addGameLog(`${data.playerName} использует артефакт`, 'info');
-        this.playSound('artifact');
     }
     
     handleQuestCompleted(data) {
         this.addGameLog(`Получен артефакт: ${data.artifact.name}`, 'success');
-        this.playSound('questComplete');
     }
     
     handleCardAdded(data) {
         if (this.isPlayer && this.gameState && 
             this.gameState.currentTurn === this.clientId) {
             this.addGameLog(`Добавлена карта: ${data.card.name}`, 'success');
-            this.playSound('draw');
-        }
-    }
-    
-    handleChatMessage(data) {
-        this.addChatMessage(data.playerName, data.message, data.timestamp);
-        if (data.playerId !== this.clientId) {
-            this.playSound('notification');
         }
     }
     
@@ -500,7 +539,6 @@ class BattleScriptProClient {
         console.error('❌ Ошибка от сервера:', data.message);
         this.addGameLog(data.message, 'error');
         this.hideLoading();
-        this.playSound('error');
     }
     
     showLoading(message) {
@@ -539,7 +577,10 @@ class BattleScriptProClient {
         const statusBadge = document.getElementById('playerStatusBadge');
         
         if (nameDisplay) nameDisplay.textContent = this.playerName || 'Неизвестный игрок';
-        if (avatarImg) avatarImg.src = GameConfig.getAvatarById(this.playerAvatar)?.image || 'https://i.imgur.com/6V9zLqW.png';
+        if (avatarImg) {
+            avatarImg.src = GameConfig.getAvatarById(this.playerAvatar)?.image || './assets/images/warrior.jpg';
+            avatarImg.style.objectFit = 'cover';
+        }
         if (statusBadge) statusBadge.textContent = this.gameState ? 'В игре' : 'Не в игре';
     }
     
@@ -583,7 +624,6 @@ class BattleScriptProClient {
     
     showError(message) {
         alert(message);
-        this.playSound('error');
     }
     
     quickJoin() {
@@ -634,7 +674,7 @@ class BattleScriptProClient {
         document.getElementById('mainScreen').classList.remove('active-screen');
         document.getElementById('gameScreen').classList.add('active-screen');
         this.handleResize();
-        this.addGameLog('Добро пожаловать на поле боя!', 'success');
+        this.addGameLog('Добро пожаловать на поле битвы!', 'success');
     }
     
     showMainScreen() {
@@ -650,26 +690,12 @@ class BattleScriptProClient {
         const player = this.gameState.player;
         const opponent = this.gameState.opponent;
         
-        // Обновляем информацию игрока
-        document.getElementById('playerNameGame').textContent = player.name;
-        const playerAvatarImg = document.getElementById('playerAvatarImgGame');
-        playerAvatarImg.src = player.avatarData?.image || 'https://i.imgur.com/6V9zLqW.png';
-        playerAvatarImg.onerror = () => {
-            playerAvatarImg.src = 'https://i.imgur.com/6V9zLqW.png';
-        };
-        
-        document.getElementById('playerHealth').textContent = player.health;
-        document.getElementById('playerMana').textContent = player.mana;
-        document.getElementById('playerMaxMana').textContent = player.maxMana;
-        document.getElementById('playerHandCount').textContent = player.hand?.length || 0;
-        document.getElementById('playerDeckCount').textContent = player.deckSize || 30;
-        
-        // Обновляем информацию противника
+        // Обновляем информацию противника (сверху слева)
         document.getElementById('opponentName').textContent = opponent.name;
         const opponentAvatarImg = document.getElementById('opponentAvatarImg');
-        opponentAvatarImg.src = opponent.avatarData?.image || 'https://i.imgur.com/6V9zLqW.png';
+        opponentAvatarImg.src = opponent.avatarData?.image || './assets/images/warrior.jpg';
         opponentAvatarImg.onerror = () => {
-            opponentAvatarImg.src = 'https://i.imgur.com/6V9zLqW.png';
+            opponentAvatarImg.src = './assets/images/warrior.jpg';
         };
         
         document.getElementById('opponentHealth').textContent = opponent.health;
@@ -677,8 +703,25 @@ class BattleScriptProClient {
         document.getElementById('opponentMaxMana').textContent = opponent.maxMana;
         document.getElementById('opponentHandCount').textContent = opponent.handSize || 0;
         
-        // Обновляем счетчик артефактов
-        document.getElementById('artifactDeckCount').textContent = this.gameState.artifactDeckSize || 0;
+        // Обновляем информацию игрока (снизу справа)
+        document.getElementById('playerNameGame').textContent = player.name;
+        const playerAvatarImg = document.getElementById('playerAvatarImgGame');
+        playerAvatarImg.src = player.avatarData?.image || './assets/images/warrior.jpg';
+        playerAvatarImg.onerror = () => {
+            playerAvatarImg.src = './assets/images/warrior.jpg';
+        };
+        
+        document.getElementById('playerHealth').textContent = player.health;
+        document.getElementById('playerMana').textContent = player.mana;
+        document.getElementById('playerMaxMana').textContent = player.maxMana;
+        document.getElementById('playerHandCount').textContent = player.hand?.length || 0;
+        
+        // Обновляем счетчики колод в новом контейнере (правый верхний угол)
+        document.getElementById('playerDeckCount').textContent = player.deckSize || 30;
+        document.getElementById('artifactDeckCount').textContent = player.artifacts?.length || 0;
+        
+        // Обновляем задание в новом контейнере (левый верхний угол)
+        this.updateQuestInfo(player.quest);
         
         // Рендерим руку
         this.renderHand('playerHand', player.hand || []);
@@ -689,9 +732,6 @@ class BattleScriptProClient {
         
         // Рендерим артефакты
         this.renderArtifacts('artifactContainer', player.artifacts || []);
-        
-        // Обновляем квест
-        this.updateQuestInfo(player.quest);
         
         // Обновляем статус хода
         const isMyTurn = this.gameState.currentTurn === player.id;
@@ -706,14 +746,27 @@ class BattleScriptProClient {
         const player2 = this.gameState.player2;
         
         document.getElementById('playerNameGame').textContent = 'Наблюдатель';
-        document.getElementById('playerAvatarImgGame').src = 'https://i.imgur.com/6V9zLqW.png';
+        const playerAvatarImg = document.getElementById('playerAvatarImgGame');
+        playerAvatarImg.src = './assets/images/warrior.jpg';
+        playerAvatarImg.style.objectFit = 'cover';
         document.getElementById('playerHealth').textContent = '∞';
         document.getElementById('playerMana').textContent = '∞';
         document.getElementById('playerMaxMana').textContent = '∞';
         
         document.getElementById('opponentName').textContent = `${player1.name} vs ${player2.name}`;
-        document.getElementById('opponentAvatarImg').src = 'https://i.imgur.com/6V9zLqW.png';
+        const opponentAvatarImg = document.getElementById('opponentAvatarImg');
+        opponentAvatarImg.src = './assets/images/warrior.jpg';
+        opponentAvatarImg.style.objectFit = 'cover';
         document.getElementById('opponentHealth').textContent = '∞';
+        
+        // Обновляем колоды для наблюдателя
+        document.getElementById('playerDeckCount').textContent = '?';
+        document.getElementById('artifactDeckCount').textContent = '?';
+        
+        // Обновляем задание
+        document.getElementById('currentQuest').textContent = 'Наблюдение за игрой';
+        document.getElementById('questProgressFill').style.width = '0%';
+        document.getElementById('questProgressText').textContent = '0/0';
         
         this.renderHand('playerHand', []);
         this.renderBoard('playerBoardGrid', player1.board || [], false);
@@ -758,8 +811,8 @@ class BattleScriptProClient {
                 this.hideCardTooltip();
             });
             
-            cardElement.addEventListener('click', () => {
-                this.selectCard(card);
+            cardElement.addEventListener('click', (e) => {
+                this.handleCardClick(card, e);
             });
             
             container.appendChild(cardElement);
@@ -775,16 +828,69 @@ class BattleScriptProClient {
     
     handleCardHover(cardElement, isHovering) {
         if (isHovering) {
+            // Поднимаем только эту карту
+            const cards = document.querySelectorAll('.card-in-hand');
+            const index = Array.from(cards).indexOf(cardElement);
+            
+            // Сбрасываем все остальные карты
+            cards.forEach((otherCard, otherIndex) => {
+                if (otherCard !== cardElement) {
+                    otherCard.style.transform = `translateX(${otherIndex * 10}px) translateY(0) scale(1)`;
+                    otherCard.style.zIndex = otherIndex;
+                    otherCard.style.boxShadow = 'var(--shadow-lg)';
+                }
+            });
+            
+            // Поднимаем выбранную карту
             cardElement.style.transform = 'translateY(-80px) scale(2.5)';
             cardElement.style.zIndex = '2000';
             cardElement.style.boxShadow = '0 25px 60px rgba(0, 0, 0, 0.7), 0 0 50px rgba(37, 99, 235, 0.7)';
         } else if (!cardElement.classList.contains('selected')) {
+            // Сбрасываем карту, если она не выбрана
             const cards = document.querySelectorAll('.card-in-hand');
             const index = Array.from(cards).indexOf(cardElement);
             cardElement.style.transform = `translateX(${index * 10}px) translateY(0) scale(1)`;
             cardElement.style.zIndex = index;
             cardElement.style.boxShadow = 'var(--shadow-lg)';
         }
+    }
+    
+    handleCardClick(card, event) {
+        if (!this.isPlayer || !this.gameState || this.isSpectator) return;
+        
+        const player = this.gameState.player;
+        if (this.gameState.currentTurn !== player.id) {
+            this.addGameLog('Сейчас не ваш ход', 'error');
+            return;
+        }
+        
+        event.stopPropagation();
+        
+        // Сбрасываем предыдущий выбор
+        this.clearSelections();
+        
+        // Выбираем карту
+        this.selectedCard = card;
+        
+        // Подсвечиваем выбранную карту
+        const cardElement = document.querySelector(`[data-id="${card.instanceId}"]`);
+        if (cardElement) {
+            cardElement.classList.add('selected');
+            cardElement.style.transform = 'translateY(-60px) scale(2.2)';
+            cardElement.style.zIndex = '1000';
+            cardElement.style.boxShadow = 'var(--shadow-xl), 0 0 30px rgba(245, 158, 11, 0.7)';
+        }
+        
+        // Показываем контекстное меню
+        const rect = cardElement.getBoundingClientRect();
+        const options = {
+            play: card.type === 'creature' || card.type === 'spell',
+            attack: false, // Для карт в руке атака недоступна
+            use: card.type === 'spell' || card.type === 'artifact',
+            cancel: true
+        };
+        
+        this.showContextMenu(rect.left, rect.top - 120, options);
     }
     
     createCardElement(cardData, location) {
@@ -875,11 +981,10 @@ class BattleScriptProClient {
                     const creatureElement = this.createCreatureElement(creature, isOwnBoard);
                     cell.appendChild(creatureElement);
                     
-                    if (isOwnBoard && creature.canAttack && !creature.hasAttacked && !this.isSpectator) {
-                        creatureElement.classList.add('attackable');
+                    if (isOwnBoard && !this.isSpectator) {
                         creatureElement.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            this.selectAttacker(creature);
+                            this.handleCreatureClick(creature, e);
                         });
                     }
                     
@@ -897,6 +1002,41 @@ class BattleScriptProClient {
                 }
             }
         });
+    }
+    
+    handleCreatureClick(creature, event) {
+        if (!this.isPlayer || !this.gameState || this.isSpectator) return;
+        
+        const player = this.gameState.player;
+        if (this.gameState.currentTurn !== player.id) {
+            this.addGameLog('Сейчас не ваш ход', 'error');
+            return;
+        }
+        
+        event.stopPropagation();
+        
+        // Сбрасываем предыдущий выбор
+        this.clearSelections();
+        
+        // Выбираем существо
+        this.selectedCreature = creature;
+        
+        // Подсвечиваем выбранное существо
+        const creatureElement = document.querySelector(`[data-id="${creature.instanceId}"]`);
+        if (creatureElement) {
+            creatureElement.classList.add('selected');
+        }
+        
+        // Показываем контекстное меню
+        const rect = creatureElement.getBoundingClientRect();
+        const options = {
+            play: false,
+            attack: creature.canAttack && !creature.hasAttacked,
+            use: false,
+            cancel: true
+        };
+        
+        this.showContextMenu(rect.left, rect.top - 100, options);
     }
     
     createCreatureElement(creature, isOwn) {
@@ -1012,9 +1152,9 @@ class BattleScriptProClient {
                 </div>
             `;
             
-            element.addEventListener('click', () => {
+            element.addEventListener('click', (e) => {
                 if (!this.isSpectator) {
-                    this.selectArtifact(artifact);
+                    this.handleArtifactClick(artifact, e);
                 }
             });
             
@@ -1022,96 +1162,155 @@ class BattleScriptProClient {
         });
     }
     
-    selectCard(card) {
+    handleArtifactClick(artifact, event) {
         if (!this.isPlayer || !this.gameState || this.isSpectator) return;
         
         const player = this.gameState.player;
         if (this.gameState.currentTurn !== player.id) {
             this.addGameLog('Сейчас не ваш ход', 'error');
-            this.playSound('error');
             return;
         }
         
-        const wasSelected = this.selectedCard?.instanceId === card.instanceId;
+        event.stopPropagation();
+        
+        // Сбрасываем предыдущий выбор
         this.clearSelections();
         
-        if (!wasSelected) {
-            this.selectedCard = card;
-            
-            document.querySelectorAll('.card-in-hand').forEach(el => {
-                el.classList.remove('selected');
-                const cards = document.querySelectorAll('.card-in-hand');
-                const index = Array.from(cards).indexOf(el);
-                if (!el.classList.contains('selected')) {
-                    el.style.transform = `translateX(${index * 10}px) translateY(0) scale(1)`;
-                    el.style.zIndex = index;
-                    el.style.boxShadow = 'var(--shadow-lg)';
-                }
-            });
-            
-            const cardElement = document.querySelector(`[data-id="${card.instanceId}"]`);
-            if (cardElement) {
-                cardElement.classList.add('selected');
-                cardElement.style.transform = 'translateY(-60px) scale(2.2)';
-                cardElement.style.zIndex = '1000';
-                cardElement.style.boxShadow = 'var(--shadow-xl), 0 0 30px rgba(245, 158, 11, 0.7)';
-                this.addGameLog(`Выбрана карта: ${card.name}`, 'info');
-            }
-            
-            this.updateControls(true);
-            this.playSound('select');
-        }
-    }
-    
-    selectArtifact(artifact) {
-        if (!this.isPlayer || !this.gameState || this.isSpectator) return;
-        
-        const player = this.gameState.player;
-        if (this.gameState.currentTurn !== player.id) {
-            this.addGameLog('Сейчас не ваш ход', 'error');
-            this.playSound('error');
-            return;
-        }
-        
-        this.clearSelections();
+        // Выбираем артефакт
         this.selectedArtifact = artifact;
         
+        // Подсвечиваем выбранный артефакт
         document.querySelectorAll('.artifact-item').forEach(el => {
             el.classList.remove('selected');
         });
         const artifactElement = document.querySelector(`[data-id="${artifact.instanceId}"]`);
         if (artifactElement) {
             artifactElement.classList.add('selected');
-            this.addGameLog(`Выбран артефакт: ${artifact.name}`, 'info');
         }
         
-        this.updateControls(true);
-        this.playSound('select');
+        // Показываем контекстное меню
+        const rect = artifactElement.getBoundingClientRect();
+        const options = {
+            play: false,
+            attack: false,
+            use: true,
+            cancel: true
+        };
+        
+        this.showContextMenu(rect.left, rect.top - 100, options);
     }
     
-    selectAttacker(creature) {
-        if (!this.isPlayer || !this.gameState || this.isSpectator) return;
-        
-        const player = this.gameState.player;
-        if (this.gameState.currentTurn !== player.id) {
-            this.addGameLog('Сейчас не ваш ход', 'error');
-            this.playSound('error');
+    playSelectedCard() {
+        if (!this.selectedCard) {
+            this.addGameLog('Выберите карту для розыгрыша', 'error');
             return;
         }
         
-        if (!creature.canAttack || creature.hasAttacked) {
+        if (this.selectedCard.type === 'creature') {
+            this.targetMode = 'play';
+            this.highlightAvailableCells();
+            this.addGameLog('Выберите ячейку для существа', 'info');
+        } else {
+            this.sendToServer({
+                type: 'play_card',
+                cardId: this.selectedCard.instanceId,
+                cell: 'hero'
+            });
+            this.clearSelections();
+        }
+    }
+    
+    useSpell() {
+        if (!this.selectedCard || this.selectedCard.type !== 'spell') {
+            this.addGameLog('Выберите заклинание', 'error');
+            return;
+        }
+        
+        this.sendToServer({
+            type: 'play_card',
+            cardId: this.selectedCard.instanceId,
+            cell: 'hero'
+        });
+        
+        this.clearSelections();
+    }
+    
+    useArtifact() {
+        if (!this.selectedArtifact) {
+            this.addGameLog('Выберите артефакт', 'error');
+            return;
+        }
+        
+        this.sendToServer({
+            type: 'use_artifact',
+            artifactId: this.selectedArtifact.instanceId,
+            targetId: 'hero'
+        });
+        
+        this.clearSelections();
+    }
+    
+    initiateAttack() {
+        if (!this.selectedCreature) {
+            this.addGameLog('Выберите существо для атаки', 'error');
+            return;
+        }
+        
+        if (!this.selectedCreature.canAttack || this.selectedCreature.hasAttacked) {
             this.addGameLog('Это существо не может атаковать', 'error');
-            this.playSound('error');
             return;
         }
         
-        this.selectedAttacker = creature;
         this.targetMode = 'attack';
-        
-        this.highlightAttackTargets(creature);
+        this.highlightAttackTargets(this.selectedCreature);
         
         this.addGameLog('Выберите цель для атаки', 'info');
-        this.playSound('select');
+    }
+    
+    highlightAvailableCells() {
+        if (!this.gameState) return;
+        
+        const player = this.gameState.player;
+        
+        document.querySelectorAll('.highlighted').forEach(el => {
+            el.classList.remove('highlighted');
+        });
+        
+        for (let i = 0; i < player.board.length; i++) {
+            if (!player.board[i]) {
+                const cellElement = document.querySelector(`#playerBoardGrid [data-cell="${i}"]`);
+                if (cellElement) {
+                    cellElement.classList.add('highlighted');
+                    cellElement.addEventListener('click', () => {
+                        this.playCardToCell(i);
+                    }, { once: true });
+                }
+            }
+        }
+    }
+    
+    playCardToCell(cellIndex) {
+        if (!this.selectedCard) return;
+        
+        const player = this.gameState.player;
+        
+        if (player.board[cellIndex]) {
+            this.addGameLog('Ячейка уже занята', 'error');
+            return;
+        }
+        
+        if (player.mana < this.selectedCard.cost) {
+            this.addGameLog('Недостаточно маны', 'error');
+            return;
+        }
+        
+        this.sendToServer({
+            type: 'play_card',
+            cardId: this.selectedCard.instanceId,
+            cell: cellIndex
+        });
+        
+        this.clearSelections();
     }
     
     highlightAttackTargets(attacker) {
@@ -1148,107 +1347,6 @@ class BattleScriptProClient {
         }
     }
     
-    handleCellClick(cell) {
-        if (!this.isPlayer || !this.gameState || this.isSpectator) return;
-        
-        const cellIndex = parseInt(cell.dataset.cell);
-        
-        if (this.targetMode === 'play' && this.selectedCard) {
-            this.playCardToCell(cellIndex);
-        } else if (this.targetMode === 'artifact' && this.selectedArtifact) {
-            this.useArtifactOnCell(cellIndex);
-        }
-    }
-    
-    playCardToCell(cellIndex) {
-        if (!this.selectedCard) return;
-        
-        const player = this.gameState.player;
-        
-        if (player.board[cellIndex]) {
-            this.addGameLog('Ячейка уже занята', 'error');
-            this.playSound('error');
-            return;
-        }
-        
-        if (player.mana < this.selectedCard.cost) {
-            this.addGameLog('Недостаточно маны', 'error');
-            this.playSound('error');
-            return;
-        }
-        
-        this.sendToServer({
-            type: 'play_card',
-            cardId: this.selectedCard.instanceId,
-            cell: cellIndex
-        });
-        
-        this.clearSelections();
-    }
-    
-    useArtifactOnCell(cellIndex) {
-        if (!this.selectedArtifact) return;
-        
-        this.sendToServer({
-            type: 'use_artifact',
-            artifactId: this.selectedArtifact.instanceId,
-            targetId: cellIndex.toString()
-        });
-        
-        this.clearSelections();
-    }
-    
-    playSelectedCard() {
-        if (!this.selectedCard) {
-            this.addGameLog('Выберите карту для розыгрыша', 'error');
-            this.playSound('error');
-            return;
-        }
-        
-        if (this.selectedCard.type === 'creature') {
-            this.targetMode = 'play';
-            this.highlightAvailableCells();
-            this.addGameLog('Выберите ячейку для существа', 'info');
-        } else {
-            this.sendToServer({
-                type: 'play_card',
-                cardId: this.selectedCard.instanceId,
-                cell: 'hero'
-            });
-            this.clearSelections();
-        }
-    }
-    
-    highlightAvailableCells() {
-        if (!this.gameState) return;
-        
-        const player = this.gameState.player;
-        
-        document.querySelectorAll('.highlighted').forEach(el => {
-            el.classList.remove('highlighted');
-        });
-        
-        for (let i = 0; i < player.board.length; i++) {
-            if (!player.board[i]) {
-                const cellElement = document.querySelector(`#playerBoardGrid [data-cell="${i}"]`);
-                if (cellElement) {
-                    cellElement.classList.add('highlighted');
-                    cellElement.addEventListener('click', () => {
-                        this.playCardToCell(i);
-                    }, { once: true });
-                }
-            }
-        }
-    }
-    
-    initiateAttack() {
-        if (this.targetMode === 'attack') {
-            this.cancelTargetMode();
-        } else {
-            this.addGameLog('Выберите существо для атаки', 'info');
-        }
-    }
-    
     executeAttack(attackerId, targetId) {
         this.clearAttackTargets();
         
@@ -1266,63 +1364,14 @@ class BattleScriptProClient {
         });
     }
     
-    autoAttack() {
+    handleCellClick(cell) {
         if (!this.isPlayer || !this.gameState || this.isSpectator) return;
         
-        const player = this.gameState.player;
-        if (this.gameState.currentTurn !== player.id) {
-            this.addGameLog('Сейчас не ваш ход', 'error');
-            this.playSound('error');
-            return;
+        const cellIndex = parseInt(cell.dataset.cell);
+        
+        if (this.targetMode === 'play' && this.selectedCard) {
+            this.playCardToCell(cellIndex);
         }
-        
-        const hasAttackers = player.board.some(creature => 
-            creature && creature.canAttack && !creature.hasAttacked
-        );
-        
-        if (!hasAttackers) {
-            this.addGameLog('Нет существ для авто-атаки', 'error');
-            this.playSound('error');
-            return;
-        }
-        
-        this.sendToServer({
-            type: 'auto_attack'
-        });
-    }
-    
-    useSelectedArtifact() {
-        if (!this.selectedArtifact) {
-            this.addGameLog('Выберите артефакт', 'error');
-            this.playSound('error');
-            return;
-        }
-        
-        this.targetMode = 'artifact';
-        this.addGameLog('Выберите цель для артефакта', 'info');
-        this.highlightArtifactTargets();
-    }
-    
-    highlightArtifactTargets() {
-        if (!this.gameState) return;
-        
-        const player = this.gameState.player;
-        
-        document.querySelectorAll('.highlighted').forEach(el => {
-            el.classList.remove('highlighted');
-        });
-        
-        player.board.forEach((creature, cell) => {
-            if (creature) {
-                const cellElement = document.querySelector(`#playerBoardGrid [data-cell="${cell}"]`);
-                if (cellElement) {
-                    cellElement.classList.add('highlighted');
-                    cellElement.addEventListener('click', () => {
-                        this.useArtifactOnCell(cell);
-                    }, { once: true });
-                }
-            }
-        });
     }
     
     endTurn() {
@@ -1331,7 +1380,6 @@ class BattleScriptProClient {
         const player = this.gameState.player;
         if (this.gameState.currentTurn !== player.id) {
             this.addGameLog('Сейчас не ваш ход', 'error');
-            this.playSound('error');
             return;
         }
         
@@ -1344,7 +1392,7 @@ class BattleScriptProClient {
     clearSelections() {
         this.selectedCard = null;
         this.selectedArtifact = null;
-        this.selectedAttacker = null;
+        this.selectedCreature = null;
         this.targetMode = null;
         
         document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
@@ -1359,6 +1407,7 @@ class BattleScriptProClient {
             card.style.boxShadow = 'var(--shadow-lg)';
         });
         
+        this.hideContextMenu();
         this.updateControls(this.isPlayer && this.gameState?.currentTurn === this.clientId);
     }
     
@@ -1401,7 +1450,12 @@ class BattleScriptProClient {
     }
     
     updateQuestInfo(quest) {
-        if (!quest) return;
+        if (!quest) {
+            document.getElementById('currentQuest').textContent = 'Нет активного задания';
+            document.getElementById('questProgressFill').style.width = '0%';
+            document.getElementById('questProgressText').textContent = '0/0';
+            return;
+        }
         
         const questText = document.getElementById('currentQuest');
         const progressFill = document.getElementById('questProgressFill');
@@ -1434,38 +1488,13 @@ class BattleScriptProClient {
     
     updateControls(isMyTurn) {
         if (!this.isPlayer || this.isSpectator) {
-            ['attackBtn', 'playCardBtn', 'autoAttackBtn', 'useArtifactBtn', 'endTurnBtn'].forEach(id => {
-                const btn = document.getElementById(id);
-                if (btn) {
-                    btn.disabled = true;
-                }
-            });
+            const endTurnBtn = document.getElementById('endTurnBtn');
+            if (endTurnBtn) endTurnBtn.disabled = true;
             return;
         }
         
         const isActive = isMyTurn && this.gameState?.status === 'active';
-        
-        const attackBtn = document.getElementById('attackBtn');
-        const playCardBtn = document.getElementById('playCardBtn');
-        const autoAttackBtn = document.getElementById('autoAttackBtn');
-        const useArtifactBtn = document.getElementById('useArtifactBtn');
         const endTurnBtn = document.getElementById('endTurnBtn');
-        
-        if (attackBtn) {
-            attackBtn.disabled = !isActive || !this.selectedAttacker;
-        }
-        
-        if (playCardBtn) {
-            playCardBtn.disabled = !isActive || !this.selectedCard;
-        }
-        
-        if (autoAttackBtn) {
-            autoAttackBtn.disabled = !isActive;
-        }
-        
-        if (useArtifactBtn) {
-            useArtifactBtn.disabled = !isActive || !this.selectedArtifact;
-        }
         
         if (endTurnBtn) {
             endTurnBtn.disabled = !isActive;
@@ -1487,10 +1516,6 @@ class BattleScriptProClient {
                     this.addGameLog('Время хода истекло!', 'error');
                     this.endTurn();
                 }
-            }
-            
-            if (this.timeLeft === 10) {
-                this.playSound('warning');
             }
         }, 1000);
     }
@@ -1531,52 +1556,6 @@ class BattleScriptProClient {
         }
     }
     
-    addChatMessage(sender, message, timestamp) {
-        const container = document.getElementById('chatMessages');
-        if (!container) return;
-        
-        const messageElement = document.createElement('div');
-        messageElement.className = 'chat-message';
-        
-        const time = timestamp ? new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
-                                 new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        
-        messageElement.innerHTML = `
-            <div class="message-header">
-                <span class="message-sender">${this.escapeHtml(sender)}</span>
-                <span class="message-time">${time}</span>
-            </div>
-            <div class="message-content">${this.escapeHtml(message)}</div>
-        `;
-        
-        container.appendChild(messageElement);
-        container.scrollTop = container.scrollHeight;
-        
-        const messages = container.querySelectorAll('.chat-message');
-        if (messages.length > 100) {
-            messages[0].remove();
-        }
-    }
-    
-    sendChatMessage() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        
-        if (!message) return;
-        
-        if (message.length > 200) {
-            this.addGameLog('Сообщение слишком длинное (макс. 200 символов)', 'error');
-            return;
-        }
-        
-        if (this.sendToServer({
-            type: 'chat_message',
-            message: message
-        })) {
-            input.value = '';
-        }
-    }
-    
     toggleSidePanel() {
         const panel = document.getElementById('sidePanel');
         const toggle = document.getElementById('panelToggle');
@@ -1585,7 +1564,7 @@ class BattleScriptProClient {
         panel.classList.toggle('active', this.sidePanelOpen);
         
         if (this.sidePanelOpen) {
-            toggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            toggle.innerHTML = '<i class="fas fa-times"></i>';
         } else {
             toggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
         }
@@ -1611,7 +1590,6 @@ class BattleScriptProClient {
         }
         
         this.showMainScreen();
-        this.playSound('menu');
     }
     
     resetGameState() {
@@ -1623,13 +1601,22 @@ class BattleScriptProClient {
         this.stopTurnTimer();
         this.timeLeft = 120;
         
-        this.sidePanelOpen = false;
-        document.getElementById('sidePanel').classList.remove('active');
+        this.sidePanelOpen = true;
+        document.getElementById('sidePanel').classList.add('active');
         document.getElementById('panelToggle').innerHTML = '<i class="fas fa-chevron-left"></i>';
+        
+        // Сбрасываем задание
+        document.getElementById('currentQuest').textContent = 'Выполните условие';
+        document.getElementById('questProgressFill').style.width = '0%';
+        document.getElementById('questProgressText').textContent = '0/0';
+        
+        // Сбрасываем колоды
+        document.getElementById('playerDeckCount').textContent = '30';
+        document.getElementById('artifactDeckCount').textContent = '10';
         
         const elementsToClear = [
             'playerHand', 'playerBoardGrid', 'opponentBoardGrid', 
-            'gameLog', 'chatMessages', 'artifactContainer'
+            'gameLog', 'artifactContainer'
         ];
         
         elementsToClear.forEach(id => {
@@ -1637,9 +1624,6 @@ class BattleScriptProClient {
             if (element) element.innerHTML = '';
         });
         
-        document.getElementById('currentQuest').textContent = 'Выполните условие';
-        document.getElementById('questProgressFill').style.width = '0%';
-        document.getElementById('questProgressText').textContent = '0/0';
         document.getElementById('currentTurnPlayer').textContent = 'Ожидание...';
         document.getElementById('gameTimer').textContent = '02:00';
         
@@ -1650,8 +1634,8 @@ class BattleScriptProClient {
     
     showArtifactInfo() {
         if (this.gameState) {
-            const count = this.gameState.artifactDeckSize || 0;
-            this.addGameLog(`Колода артефактов: ${count} карт${count > 0 ? '' : ' (пуста)'}`, 'info');
+            const count = this.gameState.player?.artifacts?.length || 0;
+            this.addGameLog(`Артефакты: ${count} штук${count > 0 ? '' : ' (нет артефактов)'}`, 'info');
         }
     }
     
@@ -1660,14 +1644,6 @@ class BattleScriptProClient {
             const player = this.gameState.player;
             const count = player?.deckSize || 0;
             this.addGameLog(`Ваша колода: ${count} карт${count > 0 ? '' : ' (пуста)'}`, 'info');
-        }
-    }
-    
-    playSound(soundName) {
-        console.log(`🔊 Воспроизведение звука: ${soundName}`);
-        
-        if (navigator.vibrate && soundName === 'attack') {
-            navigator.vibrate(50);
         }
     }
     
@@ -1703,36 +1679,23 @@ class BattleScriptProClient {
     }
     
     handleResize() {
+        // Адаптация интерфейса под разные размеры экрана
         const width = window.innerWidth;
-        const isMobile = width < 768;
-        const isTablet = width >= 768 && width < 1024;
+        const height = window.innerHeight;
         
-        // Поднимаем поле битвы и опускаем руку
-        if (isMobile) {
-            document.documentElement.style.setProperty('--battle-field-margin-top', '120px');
-            document.documentElement.style.setProperty('--player-hand-bottom', '120px');
-            document.documentElement.style.setProperty('--player-hand-height', '180px');
-        } else if (isTablet) {
-            document.documentElement.style.setProperty('--battle-field-margin-top', '140px');
-            document.documentElement.style.setProperty('--player-hand-bottom', '140px');
+        // Для мобильных устройств
+        if (width < 768) {
+            document.documentElement.style.setProperty('--battle-field-top', '180px');
+            document.documentElement.style.setProperty('--player-hand-bottom', '100px');
             document.documentElement.style.setProperty('--player-hand-height', '200px');
+        } else if (width < 1024) {
+            document.documentElement.style.setProperty('--battle-field-top', '200px');
+            document.documentElement.style.setProperty('--player-hand-bottom', '120px');
+            document.documentElement.style.setProperty('--player-hand-height', '220px');
         } else {
-            document.documentElement.style.setProperty('--battle-field-margin-top', '160px');
-            document.documentElement.style.setProperty('--player-hand-bottom', '160px');
+            document.documentElement.style.setProperty('--battle-field-top', '220px');
+            document.documentElement.style.setProperty('--player-hand-bottom', '140px');
             document.documentElement.style.setProperty('--player-hand-height', '240px');
-        }
-        
-        // Обновляем CSS для поднятия поля битвы
-        const battleField = document.querySelector('.battle-field');
-        const playerHand = document.querySelector('.player-hand');
-        
-        if (battleField) {
-            battleField.style.marginTop = getComputedStyle(document.documentElement).getPropertyValue('--battle-field-margin-top');
-        }
-        
-        if (playerHand) {
-            playerHand.style.bottom = getComputedStyle(document.documentElement).getPropertyValue('--player-hand-bottom');
-            playerHand.style.height = getComputedStyle(document.documentElement).getPropertyValue('--player-hand-height');
         }
     }
     
@@ -1779,17 +1742,14 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'escape':
                 if (document.querySelector('.modal-overlay.active')) {
                     document.querySelector('.modal-overlay.active .modal-close')?.click();
+                } else if (window.gameClient?.contextMenu?.style.display === 'block') {
+                    window.gameClient.hideContextMenu();
+                    window.gameClient.clearSelections();
                 }
                 break;
             case 'enter':
                 if (window.gameClient?.gameState && window.gameClient.isPlayer) {
                     window.gameClient.endTurn();
-                }
-                break;
-            case ' ':
-                if (window.gameClient?.gameState && window.gameClient.isPlayer) {
-                    window.gameClient.autoAttack();
-                    e.preventDefault();
                 }
                 break;
         }

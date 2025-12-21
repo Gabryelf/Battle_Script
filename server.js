@@ -53,7 +53,7 @@ try {
         // Методы-заглушки
         getAvatarById: function(id) {
             return this.avatars.find(avatar => avatar.id === id) || { 
-                image: 'https://i.imgur.com/6V9zLqW.png', 
+                image: './assets/images/warrior.jpg', 
                 bonusHealth: 0,
                 name: 'Воин'
             };
@@ -69,7 +69,7 @@ try {
                     attack: Math.floor(Math.random() * 3) + 1,
                     health: Math.floor(Math.random() * 4) + 1,
                     rarity: 'common',
-                    image: 'https://i.imgur.com/6V9zLqW.png'
+                    image: './assets/images/warrior.jpg'
                 });
             }
             return basicDeck;
@@ -81,8 +81,8 @@ try {
             return { 
                 id: 'basic_quest',
                 type: 'summon',
-                requirement: 3,
-                description: 'Призовите 3 существ',
+                requirement: 1,
+                description: 'Призовите 1 существ',
                 progress: 0,
                 completed: false,
                 rewardGranted: false
@@ -144,6 +144,23 @@ class BattleScriptServer {
             this.serveFile(res, './client.js', 'application/javascript');
         } else if (req.url === '/config.js') {
             this.serveFile(res, './config.js', 'application/javascript');
+        } else if (req.url.startsWith('/assets/')) {
+            // Обслуживаем статические файлы из папки assets
+            const filePath = '.' + req.url;
+            const ext = path.extname(filePath);
+            const contentType = this.getContentType(ext);
+            
+            try {
+                const content = await fs.readFile(filePath);
+                res.writeHead(200, { 
+                    'Content-Type': contentType,
+                    'Cache-Control': 'public, max-age=86400'
+                });
+                res.end(content);
+            } catch (error) {
+                res.writeHead(404);
+                res.end('File not found');
+            }
         } else if (req.url === '/ws' || req.url === '/ws/') {
             res.writeHead(400);
             res.end('WebSocket endpoint');
@@ -151,6 +168,20 @@ class BattleScriptServer {
             res.writeHead(404);
             res.end('Not Found');
         }
+    }
+    
+    getContentType(ext) {
+        const types = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.css': 'text/css',
+            '.js': 'application/javascript',
+            '.html': 'text/html',
+            '.json': 'application/json'
+        };
+        return types[ext.toLowerCase()] || 'application/octet-stream';
     }
     
     async serveFile(res, filePath, contentType) {
@@ -266,16 +297,12 @@ class BattleScriptServer {
                 this.handleAttack(clientId, data.attackerId, data.targetId);
                 break;
                 
-            case 'auto_attack':
-                this.handleAutoAttack(clientId);
+            case 'use_artifact':
+                this.handleUseArtifact(clientId, data.artifactId, data.targetId);
                 break;
                 
             case 'end_turn':
                 this.handleEndTurn(clientId);
-                break;
-                
-            case 'use_artifact':
-                this.handleUseArtifact(clientId, data.artifactId, data.targetId);
                 break;
                 
             case 'chat_message':
@@ -480,12 +507,12 @@ class BattleScriptServer {
         // Раздаем начальные карты
         for (let i = 0; i < GameConfig.game.initialHandSize; i++) {
             if (game.player1.deck.length > 0) {
-                const card1 = game.player1.deck.shift();
+                const card1 = {...game.player1.deck.shift()};
                 card1.instanceId = `${card1.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
                 game.player1.hand.push(card1);
             }
             if (game.player2.deck.length > 0) {
-                const card2 = game.player2.deck.shift();
+                const card2 = {...game.player2.deck.shift()};
                 card2.instanceId = `${card2.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
                 game.player2.hand.push(card2);
             }
@@ -535,7 +562,7 @@ class BattleScriptServer {
         
         // Добавляем карту в руку
         if (currentPlayer.deck.length > 0 && currentPlayer.hand.length < GameConfig.game.maxHandSize) {
-            const newCard = currentPlayer.deck.shift();
+            const newCard = {...currentPlayer.deck.shift()};
             newCard.instanceId = `${newCard.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
             currentPlayer.hand.push(newCard);
             
@@ -685,15 +712,6 @@ class BattleScriptServer {
                 }
             }
             
-            // Квест по контролю поля
-            if (player.quest && player.quest.type === 'board') {
-                const boardCount = player.board.filter(c => c).length;
-                player.quest.progress = boardCount;
-                if (boardCount >= player.quest.requirement) {
-                    player.quest.completed = true;
-                }
-            }
-            
         } else if (card.type === 'spell') {
             // Обработка заклинания
             player.spellsPlayed++;
@@ -732,6 +750,9 @@ class BattleScriptServer {
                 }
             }
         }
+        
+        // Проверяем выполнение квеста
+        this.checkQuestCompletion(game.id, player.id);
         
         // Обновляем состояние
         this.sendGameStateToPlayers(game.id);
@@ -934,181 +955,6 @@ class BattleScriptServer {
         });
     }
     
-    handleAutoAttack(clientId) {
-        const client = this.clients.get(clientId);
-        if (!client || !client.gameId) return;
-        
-        const game = this.games.get(client.gameId);
-        if (!game) return;
-        
-        if (game.currentTurn !== clientId) {
-            this.sendToClient(clientId, {
-                type: 'error',
-                message: 'Сейчас не ваш ход'
-            });
-            return;
-        }
-        
-        const player = game.currentTurn === game.player1.id ? game.player1 : game.player2;
-        const opponent = player.id === game.player1.id ? game.player2 : game.player1;
-        
-        let attacks = [];
-        let totalDamage = 0;
-        
-        player.board.forEach((attacker, cell) => {
-            if (attacker && attacker.canAttack && !attacker.hasAttacked) {
-                // Ищем цель для атаки
-                let target = null;
-                let targetCell = null;
-                
-                // 1. Ищем существа с провокацией
-                for (let i = 0; i < opponent.board.length; i++) {
-                    const creature = opponent.board[i];
-                    if (creature && creature.abilities?.includes('taunt') && 
-                        (!creature.stealth || creature.hasAttacked)) {
-                        target = creature;
-                        targetCell = i;
-                        break;
-                    }
-                }
-                
-                // 2. Проверяем существо напротив
-                if (!target) {
-                    const defender = opponent.board[cell];
-                    if (defender && (!defender.stealth || defender.hasAttacked)) {
-                        target = defender;
-                        targetCell = cell;
-                    }
-                }
-                
-                // 3. Ищем любое не скрытое существо
-                if (!target) {
-                    for (let i = 0; i < opponent.board.length; i++) {
-                        const creature = opponent.board[i];
-                        if (creature && (!creature.stealth || creature.hasAttacked)) {
-                            target = creature;
-                            targetCell = i;
-                            break;
-                        }
-                    }
-                }
-                
-                // 4. Атакуем героя, если нет других целей
-                if (!target) {
-                    // Проверяем, нет ли защитника напротив
-                    const defender = opponent.board[cell];
-                    if (!defender || defender.stealth) {
-                        // Атакуем героя
-                        const attackPower = attacker.attack + (attacker.bonuses?.attack || 0);
-                        let damage = attackPower;
-                        
-                        if (opponent.armor > 0) {
-                            const armorReduction = Math.min(opponent.armor, damage);
-                            opponent.armor -= armorReduction;
-                            damage -= armorReduction;
-                        }
-                        
-                        opponent.health -= damage;
-                        totalDamage += damage;
-                        player.damageDealt += damage;
-                        
-                        attacker.hasAttacked = true;
-                        attacker.canAttack = false;
-                        
-                        attacks.push({
-                            attacker: attacker.name,
-                            target: 'героя',
-                            damage: damage
-                        });
-                        
-                        if (opponent.health <= 0) {
-                            this.endGame(game.id, player.id);
-                            return;
-                        }
-                    }
-                } else if (target) {
-                    // Атакуем существо
-                    const attackPower = attacker.attack + (attacker.bonuses?.attack || 0);
-                    let damage = attackPower;
-                    
-                    if (target.armor > 0) {
-                        const armorReduction = Math.min(target.armor, damage);
-                        target.armor -= armorReduction;
-                        damage -= armorReduction;
-                    }
-                    
-                    target.currentHealth -= damage;
-                    totalDamage += damage;
-                    player.damageDealt += damage;
-                    
-                    // Контратака
-                    if (target.currentHealth > 0) {
-                        const counterDamage = target.attack + (target.bonuses?.attack || 0);
-                        if (attacker.armor > 0) {
-                            const armorReduction = Math.min(attacker.armor, counterDamage);
-                            attacker.armor -= armorReduction;
-                            attacker.currentHealth -= Math.max(0, counterDamage - armorReduction);
-                        } else {
-                            attacker.currentHealth -= counterDamage;
-                        }
-                        
-                        if (attacker.currentHealth <= 0) {
-                            player.board[cell] = null;
-                        }
-                    }
-                    
-                    // Проверяем смерть цели
-                    if (target.currentHealth <= 0) {
-                        opponent.board[targetCell] = null;
-                        player.creaturesKilled++;
-                    }
-                    
-                    attacker.hasAttacked = true;
-                    attacker.canAttack = false;
-                    
-                    attacks.push({
-                        attacker: attacker.name,
-                        target: target.name,
-                        damage: damage
-                    });
-                }
-            }
-        });
-        
-        if (attacks.length > 0) {
-            // Обновляем квесты
-            if (player.quest && player.quest.type === 'damage') {
-                player.quest.progress = (player.quest.progress || 0) + totalDamage;
-                if (player.quest.progress >= player.quest.requirement) {
-                    player.quest.completed = true;
-                }
-            }
-            
-            this.checkQuestCompletion(game.id, player.id);
-            
-            this.addGameLog(game.id, `${player.name}: авто-атака (${attacks.length} ударов)`);
-            
-            this.sendGameStateToPlayers(game.id);
-            this.broadcastGameStateToSpectators(game.id);
-            
-            this.sendToAllInGame(game.id, {
-                type: 'auto_attack',
-                attacks: attacks,
-                playerName: player.name
-            });
-            
-            // Проверка победы
-            if (opponent.health <= 0) {
-                this.endGame(game.id, player.id);
-            }
-        } else {
-            this.sendToClient(clientId, {
-                type: 'error',
-                message: 'Нет существ для авто-атаки'
-            });
-        }
-    }
-    
     handleUseArtifact(clientId, artifactId, targetId) {
         const client = this.clients.get(clientId);
         if (!client || !client.gameId) return;
@@ -1134,10 +980,24 @@ class BattleScriptServer {
         if (artifact.effect === 'attack_buff') {
             // Усиление атаки героя
             player.damageDealt += artifact.value || 0;
+            player.armor = (player.armor || 0) + (artifact.value || 0);
         } else if (artifact.effect === 'health_buff') {
             // Усиление здоровья героя
             const maxHealth = GameConfig.game.startingHealth + (player.avatarData?.bonusHealth || 0);
             player.health = Math.min(player.health + (artifact.value || 0), maxHealth);
+        } else if (artifact.effect === 'spell_power') {
+            // Увеличение силы заклинаний
+            player.avatarData.spellPower = (player.avatarData.spellPower || 0) + (artifact.value || 0);
+        } else if (artifact.effect === 'royal_aura') {
+            // Усиление всех существ
+            player.board.forEach(creature => {
+                if (creature) {
+                    creature.bonuses.attack += artifact.value || 0;
+                    creature.bonuses.health += artifact.value || 0;
+                    creature.currentHealth += artifact.value || 0;
+                    creature.maxHealth += artifact.value || 0;
+                }
+            });
         }
         
         // Удаляем артефакт из инвентаря
