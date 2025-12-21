@@ -23,7 +23,11 @@
             <header class="main-header">
                 <div class="title-container">
                     <h1 class="game-title">
+                        <span class="title-icon">⚔️</span>
+                        <span class="title-text">BattleScript Pro</span>
+                        <span class="title-icon">🛡️</span>
                     </h1>
+                    <div class="game-subtitle">Карточная дуэль нового поколения</div>
                 </div>
             </header>
             
@@ -66,7 +70,7 @@
                         <div class="card-content">
                             <div class="player-profile">
                                 <div class="avatar-display">
-                                    <img src="https://i.imgur.com/6V9zLqW.png" alt="Аватар" id="playerAvatarImg">
+                                    <img src="./assets/images/warrior.jpg" alt="Аватар" id="playerAvatarImg">
                                 </div>
                                 <div class="player-info">
                                     <div class="player-name" id="playerNameDisplay">Неизвестный игрок</div>
@@ -164,35 +168,8 @@
     </div>
     
     <div id="gameScreen" class="screen">
-        <!-- Верхние элементы управления -->
+        <!-- Верхние элементы управления - только таймер -->
         <div class="game-controls-top">
-            <div class="control-buttons-grid">
-                <button class="control-btn btn-attack" id="attackBtn" title="Атаковать выбранным существом">
-                    <i class="fas fa-fist-raised"></i>
-                    <span class="btn-label">Атака</span>
-                </button>
-                
-                <button class="control-btn btn-play" id="playCardBtn" title="Разыграть выбранную карту">
-                    <i class="fas fa-play"></i>
-                    <span class="btn-label">Играть</span>
-                </button>
-                
-                <button class="control-btn btn-auto" id="autoAttackBtn" title="Автоматическая атака всех существ">
-                    <i class="fas fa-robot"></i>
-                    <span class="btn-label">Авто</span>
-                </button>
-                
-                <button class="control-btn btn-artifact" id="useArtifactBtn" title="Использовать артефакт">
-                    <i class="fas fa-magic"></i>
-                    <span class="btn-label">Артефакт</span>
-                </button>
-                
-                <button class="control-btn btn-end-turn" id="endTurnBtn" title="Завершить ход">
-                    <i class="fas fa-forward"></i>
-                    <span class="btn-label">Конец хода</span>
-                </button>
-            </div>
-            
             <div class="turn-timer-section">
                 <div class="turn-info">
                     <div class="turn-label">Ход:</div>
@@ -210,7 +187,7 @@
             <div class="opponent-panel">
                 <div class="opponent-info">
                     <div class="opponent-avatar">
-                        <img src="https://i.imgur.com/6V9zLqW.png" alt="Противник" id="opponentAvatarImg">
+                        <img src="./assets/images/warrior.jpg" alt="Противник" id="opponentAvatarImg">
                     </div>
                     <div class="opponent-details">
                         <div class="opponent-name" id="opponentName">Противник</div>
@@ -232,9 +209,24 @@
                 </div>
             </div>
             
-            <!-- Артефакты слева -->
-            <div class="artifact-deck">
-                <div class="deck-container" id="artifactDeckSide">
+            <!-- НОВОЕ: Задание в левом верхнем углу -->
+            <div class="quest-container">
+                <div class="quest-header">
+                    <i class="fas fa-scroll"></i>
+                    <span>Задание</span>
+                </div>
+                <div class="quest-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="questProgressFill"></div>
+                    </div>
+                    <span class="progress-text" id="questProgressText">0/0</span>
+                </div>
+                <div class="quest-description" id="currentQuest">Выполните условие</div>
+            </div>
+            
+            <!-- НОВОЕ: Колоды в правом верхнем углу -->
+            <div class="decks-container">
+                <div class="deck-item artifact-deck" id="artifactDeckSide">
                     <div class="deck-icon">
                         <i class="fas fa-treasure-chest"></i>
                     </div>
@@ -243,26 +235,8 @@
                         <div class="deck-count" id="artifactDeckCount">10</div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Основное поле битвы -->
-            <div class="battle-field">
-                <div class="board-section opponent-board">
-                    <div class="board-grid" id="opponentBoardGrid"></div>
-                </div>
                 
-                <div class="center-divider">
-                    <div class="battle-logo">⚔️</div>
-                </div>
-                
-                <div class="board-section player-board">
-                    <div class="board-grid" id="playerBoardGrid"></div>
-                </div>
-            </div>
-            
-            <!-- Колода справа -->
-            <div class="player-deck">
-                <div class="deck-container" id="playerDeckSide">
+                <div class="deck-item" id="playerDeckSide">
                     <div class="deck-icon">
                         <i class="fas fa-layer-group"></i>
                     </div>
@@ -273,11 +247,27 @@
                 </div>
             </div>
             
+            <!-- Основное поле битвы -->
+            <div class="battle-field">
+                <!-- Доска противника (смещена вверх) -->
+                <div class="board-section opponent-board">
+                    <div class="board-grid" id="opponentBoardGrid"></div>
+                </div>
+                
+                <!-- Центральный разделитель -->
+                <div class="center-divider"></div>
+                
+                <!-- Доска игрока (смещена вниз) -->
+                <div class="board-section player-board">
+                    <div class="board-grid" id="playerBoardGrid"></div>
+                </div>
+            </div>
+            
             <!-- Игрок внизу -->
             <div class="player-panel">
                 <div class="player-info">
                     <div class="player-avatar">
-                        <img src="https://i.imgur.com/6V9zLqW.png" alt="Игрок" id="playerAvatarImgGame">
+                        <img src="./assets/images/warrior.jpg" alt="Игрок" id="playerAvatarImgGame">
                     </div>
                     <div class="player-details">
                         <div class="player-name" id="playerNameGame">Игрок</div>
@@ -294,15 +284,7 @@
                         <div class="player-status" id="playerStatusGame">Ожидание хода...</div>
                     </div>
                 </div>
-                <div class="quest-info">
-                    <div class="quest-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="questProgressFill"></div>
-                        </div>
-                        <span class="progress-text" id="questProgressText">0/0</span>
-                    </div>
-                    <div class="quest-description" id="currentQuest">Выполните условие</div>
-                </div>
+                <!-- УДАЛЕНО: Старое задание отсюда -->
             </div>
         </div>
         
@@ -313,6 +295,12 @@
                 <span>Ваша рука (<span id="playerHandCount">0</span>)</span>
             </div>
             <div class="hand-cards" id="playerHand"></div>
+            <!-- Кнопка завершения хода внизу справа -->
+            <div class="hand-controls">
+                <button class="control-btn-bottom" id="endTurnBtn" title="Завершить ход">
+                    <i class="fas fa-forward"></i>
+                </button>
+            </div>
         </div>
         
         <!-- Боковая панель -->
@@ -330,10 +318,6 @@
                     <i class="fas fa-treasure-chest"></i>
                     <span>Артефакты</span>
                 </button>
-                <button class="tab-btn" data-tab="chat">
-                    <i class="fas fa-comments"></i>
-                    <span>Чат</span>
-                </button>
             </div>
             
             <div class="panel-content">
@@ -343,18 +327,6 @@
                 
                 <div class="tab-content" id="artifactsTab">
                     <div class="artifacts-container" id="artifactContainer"></div>
-                </div>
-                
-                <div class="tab-content" id="chatTab">
-                    <div class="chat-container">
-                        <div class="chat-messages" id="chatMessages"></div>
-                        <div class="chat-input">
-                            <input type="text" id="chatInput" placeholder="Введите сообщение..." maxlength="200">
-                            <button class="chat-send-btn" id="sendChatBtn">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

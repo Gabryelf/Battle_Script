@@ -32,7 +32,7 @@ const GameConfig = {
     },
     
     sounds: {
-        enabled: true,
+        enabled: false, // Отключаем звуки, так как они не работают
         volume: 0.5
     },
     
@@ -43,7 +43,7 @@ const GameConfig = {
             icon: 'fa-user-warrior',
             color: '#dc2626',
             description: 'Сильный воин, специалист в ближнем бою',
-            image: 'https://i.imgur.com/6V9zLqW.png',
+            image: './assets/avatars/warrior.jpg',
             bonusHealth: 5,
             bonusMana: 0,
             spellPower: 0
@@ -54,7 +54,7 @@ const GameConfig = {
             icon: 'fa-hat-wizard',
             color: '#7c3aed',
             description: 'Могущественный волшебник, владеет магией',
-            image: 'https://i.imgur.com/3Q8V7xN.png',
+            image: './assets/avatars/mage.jpg',
             bonusHealth: -5,
             bonusMana: 3,
             spellPower: 2
@@ -65,7 +65,7 @@ const GameConfig = {
             icon: 'fa-bow-arrow',
             color: '#059669',
             description: 'Меткий стрелок, атакует издалека',
-            image: 'https://i.imgur.com/9KzL8vR.png',
+            image: './assets/avatars/archer.jpg',
             bonusHealth: 0,
             bonusMana: 1,
             spellPower: 0
@@ -76,7 +76,7 @@ const GameConfig = {
             icon: 'fa-hands-praying',
             color: '#f59e0b',
             description: 'Святой лекарь, исцеляет союзников',
-            image: 'https://i.imgur.com/2X7V3cQ.png',
+            image: './assets/avatars/cleric.jpg',
             bonusHealth: 10,
             bonusMana: 2,
             spellPower: 1
@@ -87,7 +87,7 @@ const GameConfig = {
             icon: 'fa-mask',
             color: '#4b5563',
             description: 'Хитрый и скрытный, наносит внезапные удары',
-            image: 'https://i.imgur.com/8M4p6qF.png',
+            image: './assets/avatars/rogue.jpg',
             bonusHealth: -3,
             bonusMana: 1,
             spellPower: 0
@@ -98,7 +98,7 @@ const GameConfig = {
             icon: 'fa-helmet-battle',
             color: '#3b82f6',
             description: 'Благородный защитник в тяжелых доспехах',
-            image: 'https://i.imgur.com/5G6bX9W.png',
+            image: './assets/avatars/knight.jpg',
             bonusHealth: 15,
             bonusMana: -2,
             spellPower: 0
@@ -117,7 +117,7 @@ const GameConfig = {
             abilities: [],
             tags: ['human', 'warrior'],
             description: 'Простой пехотинец, основа любой армии.',
-            image: 'https://i.imgur.com/1L8cX9T.png',
+            image: './assets/images/warrior.jpg',
             color: '#6b7280'
         },
         {
@@ -131,7 +131,7 @@ const GameConfig = {
             abilities: ['charge'],
             tags: ['beast'],
             description: 'Быстрый хищник, атакует сразу при выходе.',
-            image: 'https://i.imgur.com/3J9qL8X.png',
+            image: './assets/images/wolf.jpg',
             color: '#6b7280'
         },
         {
@@ -145,7 +145,7 @@ const GameConfig = {
             abilities: ['undead'],
             tags: ['undead'],
             description: 'Восставший скелет, не чувствует боли.',
-            image: 'https://i.imgur.com/5K8vL9R.png',
+            image: './assets/images/skeleton.jpg',
             color: '#6b7280'
         },
         {
@@ -159,7 +159,7 @@ const GameConfig = {
             abilities: ['ranged'],
             tags: ['human', 'ranged'],
             description: 'Меткий стрелок, атакует издалека.',
-            image: 'https://i.imgur.com/7M2vL9X.png',
+            image: './assets/images/archer_unit.jpg',
             color: '#6b7280'
         },
         {
@@ -173,7 +173,7 @@ const GameConfig = {
             abilities: ['taunt'],
             tags: ['human', 'knight'],
             description: 'Облаченный в броню защитник.',
-            image: 'https://i.imgur.com/2V8cL9X.png',
+            image: './assets/images/knight_unit.jpg',
             color: '#3b82f6'
         },
         {
@@ -187,7 +187,7 @@ const GameConfig = {
             abilities: ['trample'],
             tags: ['giant'],
             description: 'Огромное существо, проходящее сквозь врагов.',
-            image: 'https://i.imgur.com/4X9vL8R.png',
+            image: './assets/images/ogre.jpg',
             color: '#3b82f6'
         },
         {
@@ -201,7 +201,7 @@ const GameConfig = {
             abilities: ['flying'],
             tags: ['flying', 'bird'],
             description: 'Крылатое существо, атакует с воздуха.',
-            image: 'https://i.imgur.com/6L1cX9T.png',
+            image: './assets/images/harpy.jpg',
             color: '#3b82f6'
         },
         {
@@ -215,7 +215,7 @@ const GameConfig = {
             abilities: ['flying', 'breath'],
             tags: ['dragon', 'flying'],
             description: 'Могучее летающее существо, дышащее огнем.',
-            image: 'https://i.imgur.com/3X8cL9T.png',
+            image: './assets/images/dragon.jpg',
             color: '#8b5cf6'
         },
         {
@@ -229,7 +229,7 @@ const GameConfig = {
             abilities: ['flying', 'rebirth'],
             tags: ['bird', 'flying', 'mythical'],
             description: 'Легендарная птица, возрождающаяся из пепла.',
-            image: 'https://i.imgur.com/4X9vL8T.png',
+            image: './assets/images/phoenix.jpg',
             color: '#f59e0b'
         },
         {
@@ -243,7 +243,7 @@ const GameConfig = {
             abilities: ['trample', 'immune_spells'],
             tags: ['giant', 'titan', 'mythical'],
             description: 'Древний гигант, непробиваемая мощь.',
-            image: 'https://i.imgur.com/6V8cL9X.png',
+            image: './assets/images/titan.jpg',
             color: '#f59e0b'
         }
     ],
@@ -258,7 +258,7 @@ const GameConfig = {
             value: 4,
             rarity: 'common',
             description: 'Наносит 4 урона цели.',
-            image: 'https://i.imgur.com/5G6bX9W.png',
+            image: './assets/images/spell/fireball.jpg',
             color: '#dc2626'
         },
         {
@@ -270,7 +270,7 @@ const GameConfig = {
             value: 4,
             rarity: 'common',
             description: 'Восстанавливает 4 здоровья цели.',
-            image: 'https://i.imgur.com/3Q8V7xN.png',
+            image: './assets/images/spell/heal.jpg',
             color: '#059669'
         },
         {
@@ -282,7 +282,7 @@ const GameConfig = {
             value: 6,
             rarity: 'rare',
             description: 'Наносит 6 урона цели.',
-            image: 'https://i.imgur.com/9KzL8vR.png',
+            image: './assets/images/spell/lightning.jpg',
             color: '#f59e0b'
         },
         {
@@ -294,7 +294,7 @@ const GameConfig = {
             value: 1,
             rarity: 'epic',
             description: 'Замораживает всех существ противника на 1 ход.',
-            image: 'https://i.imgur.com/2X7V3cQ.png',
+            image: './assets/images/spell/frost_nova.jpg',
             color: '#3b82f6'
         }
     ],
@@ -305,12 +305,12 @@ const GameConfig = {
             name: 'Меч воина',
             type: 'artifact',
             cost: 0,
-            requirements: [],
+            requirements: ['summon_creatures', 1],
             effect: 'attack_buff',
             value: 2,
             rarity: 'common',
             description: 'Меч, увеличивающий атаку героя на 2.',
-            image: 'https://i.imgur.com/9KzL8vR.png',
+            image: './assets/images/artifact/warrior_sword.jpg',
             color: '#6b7280'
         },
         {
@@ -318,12 +318,12 @@ const GameConfig = {
             name: 'Щит воина',
             type: 'artifact',
             cost: 0,
-            requirements: [],
+            requirements: ['deal_damage', 1],
             effect: 'health_buff',
             value: 5,
             rarity: 'common',
             description: 'Щит, увеличивающий здоровье героя на 5.',
-            image: 'https://i.imgur.com/2X7V3cQ.png',
+            image: './assets/images/artifact/warrior_shield.jpg',
             color: '#6b7280'
         },
         {
@@ -331,12 +331,12 @@ const GameConfig = {
             name: 'Посох мага',
             type: 'artifact',
             cost: 0,
-            requirements: [],
+            requirements: ['kill_creatures', 1],
             effect: 'spell_power',
             value: 3,
             rarity: 'rare',
             description: 'Увеличивает силу заклинаний на 3.',
-            image: 'https://i.imgur.com/8M4p6qF.png',
+            image: './assets/images/artifact/mage_staff.jpg',
             color: '#7c3aed'
         },
         {
@@ -344,12 +344,12 @@ const GameConfig = {
             name: 'Корона Короля',
             type: 'artifact',
             cost: 0,
-            requirements: [],
+            requirements: ['play_spells', 1],
             effect: 'royal_aura',
             value: 2,
             rarity: 'legendary',
             description: 'Увеличивает атаку и здоровье всех ваших существ на 2.',
-            image: 'https://i.imgur.com/6V9zLqW.png',
+            image: './assets/images/artifact/crown.jpg',
             color: '#f59e0b'
         }
     ],
@@ -358,36 +358,36 @@ const GameConfig = {
         {
             id: 'summon_creatures',
             type: 'summon',
-            requirement: 3,
-            description: 'Призовите 3 существ',
+            requirement: 1,
+            description: 'Призовите 1 существо',
             artifactReward: 'warrior_sword'
         },
         {
             id: 'deal_damage',
             type: 'damage',
-            requirement: 15,
-            description: 'Нанесите 15 урона',
+            requirement: 1,
+            description: 'Нанесите 1 урона',
             artifactReward: 'warrior_shield'
         },
         {
             id: 'kill_creatures',
             type: 'kill',
-            requirement: 3,
-            description: 'Уничтожьте 3 существа',
+            requirement: 1,
+            description: 'Уничтожьте 1 существо',
             artifactReward: 'mage_staff'
         },
         {
             id: 'play_spells',
             type: 'spell',
-            requirement: 2,
-            description: 'Разыграйте 2 заклинания',
+            requirement: 1,
+            description: 'Разыграйте 1 заклинание',
             artifactReward: 'crown'
         },
         {
             id: 'use_artifacts',
             type: 'artifact',
-            requirement: 2,
-            description: 'Используйте 2 артефакта',
+            requirement: 1,
+            description: 'Используйте 1 артефакт',
             artifactReward: 'random_epic'
         }
     ],
@@ -495,13 +495,14 @@ const GameConfig = {
             
             for (let i = 0; i < count && cardsOfRarity.length > 0; i++) {
                 const randomIndex = Math.floor(Math.random() * cardsOfRarity.length);
-                deck.push(cardsOfRarity[randomIndex]);
+                deck.push({...cardsOfRarity[randomIndex]});
             }
         }
         
         // Дополняем до нужного размера
         while (deck.length < this.game.deckSize && allCards.length > 0) {
-            deck.push(allCards[Math.floor(Math.random() * allCards.length)]);
+            const randomIndex = Math.floor(Math.random() * allCards.length);
+            deck.push({...allCards[randomIndex]});
         }
         
         // Обрезаем до нужного размера
@@ -515,7 +516,7 @@ const GameConfig = {
         
         for (let i = 0; i < this.game.artifactDeckSize && this.artifactCards.length > 0; i++) {
             const randomIndex = Math.floor(Math.random() * this.artifactCards.length);
-            deck.push(this.artifactCards[randomIndex]);
+            deck.push({...this.artifactCards[randomIndex]});
         }
         
         return this.shuffleArray(deck);
